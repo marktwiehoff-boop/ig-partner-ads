@@ -8,8 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:db": "bash tests/db/run.sh",
-    "lint": "oxlint"
+    "test:db": "node tools/sql-komplett.mjs --pruefen && bash tests/db/run.sh",
+    "lint": "oxlint",
+    "sql:komplett": "node tools/sql-komplett.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

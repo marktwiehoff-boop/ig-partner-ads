@@ -26,7 +26,7 @@ create or replace function t_als(p_uid uuid) returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claim.sub', coalesce(p_uid::text, ''), false);
 end $$;
-grant execute on function t_fehler(text, text), t_gleich(anyelement, anyelement, text), t_als(uuid) to authenticated;
+grant execute on function t_fehler(text, text), t_gleich(anyelement, anyelement, text), t_als(uuid) to authenticated, anon, service_role;
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'mark@test.de'),
@@ -149,4 +149,14 @@ select t_als('00000000-0000-0000-0000-00000000000b');
 select t_gleich((select count(*) from ads_dashboard(current_date - 1, current_date))::int, 1, 'Viewer sieht Dashboard');
 select t_als('00000000-0000-0000-0000-00000000000f');
 select t_gleich((select count(*) from ads_dashboard(current_date - 1, current_date))::int, 1, 'Fremd (jetzt viewer) sieht Dashboard');
+reset role;
+
+-- 11. Server-Rolle darf schreiben, anon gar nichts
+set role service_role;
+insert into ads_campaigns (region_id) select id from ads_regions where slug = 'stuttgart';
+select t_gleich((select count(*) from ads_campaigns)::int, 1, 'service_role legt Kampagne an');
+reset role;
+set role anon;
+select t_fehler($$select ads_rolle_von('00000000-0000-0000-0000-00000000000a')$$, 'permission denied');
+select t_fehler($$select * from ads_regions$$, 'permission denied');
 reset role;

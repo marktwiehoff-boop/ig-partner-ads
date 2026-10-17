@@ -12,7 +12,8 @@ $RUN "$BIN/initdb" -D "$DIR/data" -U postgres -A trust >/dev/null
 $RUN "$BIN/pg_ctl" -D "$DIR/data" -o "-p $PORT -k $DIR -c listen_addresses=''" -l "$DIR/log" start >/dev/null
 PSQL="psql -h $DIR -p $PORT -U postgres -d postgres -v ON_ERROR_STOP=1 -q"
 $PSQL -f tests/db/supabase_stub.sql
-for f in supabase/migrations/*.sql; do
+# Genau die Datei, die im SQL-Editor eingefügt wird
+for f in supabase/einrichtung-komplett.sql; do
   echo "Migration: $f"
   $PSQL -f "$f"
 done

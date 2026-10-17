@@ -56,6 +56,12 @@ create policy ads_jobs_lesen on ads_jobs for select to authenticated using (ads_
 create policy ads_jobs_anlegen on ads_jobs for insert to authenticated
   with check (ads_darf_bedienen() and erstellt_von = auth.uid() and status = 'wartet');
 
+-- Supabase vergibt auf neue Funktionen pauschal Rechte an anon und
+-- authenticated. Erst alles entziehen, dann gezielt freigeben.
+revoke execute on all functions in schema public from public, anon;
+revoke execute on function ads_rolle_von(uuid) from authenticated;
+grant execute on function ads_ist_nutzer(), ads_darf_bedienen(), ads_ist_admin() to authenticated;
+
 -- RPC-Rechte: anon darf nichts, angemeldete Nutzer die Lese- und
 -- Freigabe-Funktionen (die prüfen ihre Rolle selbst).
 revoke execute on function ads_creative_entscheiden(uuid, ads_entscheidung, text) from public, anon;
@@ -68,8 +74,11 @@ grant execute on function ads_dashboard(date, date) to authenticated;
 grant execute on function ads_ausgaben_monat(date) to authenticated;
 
 -- Tabellenrechte (Supabase vergibt sie sonst pauschal; hier ausdrücklich)
+-- Supabase vergibt auf neue Tabellen pauschal alle Rechte. Erst alles
+-- entziehen, sonst greifen die spaltengenauen Rechte unten nicht.
 revoke all on ads_users, ads_einstellungen, ads_regions, ads_creatives, ads_campaigns,
-  ads_approvals, ads_leads, ads_metrics_daily, ads_jobs, ads_protokoll from anon;
+  ads_approvals, ads_leads, ads_metrics_daily, ads_jobs, ads_protokoll from anon, authenticated;
+revoke all on sequence ads_protokoll_id_seq from anon, authenticated;
 grant select on ads_users, ads_einstellungen, ads_regions, ads_creatives, ads_campaigns,
   ads_approvals, ads_leads, ads_metrics_daily, ads_jobs, ads_protokoll to authenticated;
 -- Spaltengenau: Status-, Freigabe- und Meta-Felder setzen nur Server und RPCs

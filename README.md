@@ -32,8 +32,8 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 
 1. Öffne Supabase Studio deiner Instanz auf dem Hostinger-Server.
 2. Links auf **SQL Editor** klicken, dann **New query**.
-3. Öffne im GitHub-Repo die Datei `supabase/migrations/0001_schema.sql`, kopiere den ganzen Inhalt, füge ihn ein, klicke **Run**. Es muss „Success“ erscheinen.
-4. Dasselbe der Reihe nach mit `0002_regeln.sql`, `0003_rls.sql`, `0004_start_regionen.sql`, `0005_speicher.sql`.
+3. Öffne im GitHub-Repo die Datei `supabase/einrichtung-komplett.sql`, klicke auf **Raw**, markiere alles (Strg+A), kopiere es (Strg+C), füge es im SQL Editor ein (Strg+V) und klicke **Run**. Es muss „Success. No rows returned“ erscheinen. Die Datei läuft ganz oder gar nicht.
+4. Prüfen: Links auf **Table Editor**. Dort stehen jetzt Tabellen, die mit `ads_` beginnen. In `ads_regions` stehen Berlin, Ostbayern und Region Stuttgart.
 5. Links auf **Authentication**, dann **URL Configuration**. Trage die Netlify-Adresse der App (aus Schritt 2) unter **Redirect URLs** ein. Bei selbst gehostetem Supabase steht das in der Server-Datei `.env` als `ADDITIONAL_REDIRECT_URLS`.
 
 ### 2. Netlify

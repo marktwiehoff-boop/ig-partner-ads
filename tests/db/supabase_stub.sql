@@ -17,3 +17,8 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 create schema if not exists storage;
 create table if not exists storage.buckets (id text primary key, name text, public boolean);
 grant usage on schema public to anon, authenticated, service_role;
+-- Supabase vergibt auf neue Tabellen und Funktionen pauschal alle Rechte.
+-- Das bilden wir nach, damit die Migrationen genau das wieder einschränken müssen.
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
