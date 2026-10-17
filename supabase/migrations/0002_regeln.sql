@@ -309,3 +309,42 @@ language sql stable security invoker set search_path = public as $$
    where md.datum >= date_trunc('month', p_stichtag)::date and md.datum <= p_stichtag
    group by 1
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Jede menschliche Änderung an Budget oder Obergrenze landet im Protokoll.
+-- ---------------------------------------------------------------------------
+create or replace function ads_budget_protokollieren()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if tg_table_name = 'ads_regions' then
+    if new.monatsbudget_eur is distinct from old.monatsbudget_eur then
+      insert into ads_approvals (art, objekt_id, entscheidung, details, user_id)
+      values ('budget', new.id, 'freigegeben',
+        jsonb_build_object('quelle', 'region', 'monatsbudget_alt_eur', old.monatsbudget_eur, 'monatsbudget_neu_eur', new.monatsbudget_eur),
+        auth.uid());
+    end if;
+    if new.obergrenze_eur is distinct from old.obergrenze_eur then
+      insert into ads_approvals (art, objekt_id, entscheidung, details, user_id)
+      values ('obergrenze', new.id, 'freigegeben',
+        jsonb_build_object('obergrenze_alt_eur', old.obergrenze_eur, 'obergrenze_neu_eur', new.obergrenze_eur),
+        auth.uid());
+    end if;
+  elsif new.gesamt_obergrenze_eur is distinct from old.gesamt_obergrenze_eur then
+    insert into ads_approvals (art, objekt_id, entscheidung, details, user_id)
+    values ('obergrenze', '00000000-0000-0000-0000-000000000000', 'freigegeben',
+      jsonb_build_object('gesamt', true, 'obergrenze_alt_eur', old.gesamt_obergrenze_eur, 'obergrenze_neu_eur', new.gesamt_obergrenze_eur),
+      auth.uid());
+  end if;
+  return new;
+end $$;
+
+create trigger ads_regions_protokoll
+  after update on ads_regions
+  for each row execute function ads_budget_protokollieren();
+
+create trigger ads_einstellungen_protokoll
+  after update on ads_einstellungen
+  for each row execute function ads_budget_protokollieren();

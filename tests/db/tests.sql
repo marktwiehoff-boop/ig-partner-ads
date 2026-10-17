@@ -75,6 +75,10 @@ select t_gleich((select monatsbudget_eur from ads_regions where slug = 'berlin')
 select t_fehler($$update ads_einstellungen set gesamt_obergrenze_eur = 1000 where id$$, 'unter der Summe');
 select t_fehler($$update ads_regions set obergrenze_eur = 600 where slug = 'berlin'$$, 'über der Obergrenze');
 
+select t_gleich((select count(*) from ads_approvals where art = 'obergrenze' and (details->>'gesamt')::boolean)::int, 1, 'Gesamtgrenze protokolliert');
+select t_gleich((select count(*) from ads_approvals where art = 'budget' and details->>'quelle' = 'region')::int, 2, 'Budgetänderungen protokolliert');
+select t_gleich((select user_id from ads_approvals where art = 'obergrenze' and objekt_id <> '00000000-0000-0000-0000-000000000000' limit 1), '00000000-0000-0000-0000-00000000000a'::uuid, 'Obergrenze mit Mark protokolliert');
+
 -- 5. Viewer und Fremde
 select t_als('00000000-0000-0000-0000-00000000000b');
 update ads_regions set monatsbudget_eur = 1 where slug = 'stuttgart';
@@ -100,7 +104,7 @@ select t_fehler($$update ads_creatives set status = 'freigegeben'$$, 'Freigabe-K
 update ads_creatives set medien = '[{"format":"4:5","typ":"bild","url":"https://x/1.jpg"}]';
 select ads_creative_entscheiden((select id from ads_creatives limit 1), 'freigegeben', 'passt');
 select t_gleich((select status::text from ads_creatives limit 1), 'freigegeben', 'Creative freigegeben');
-select t_gleich((select user_id from ads_approvals limit 1), '00000000-0000-0000-0000-00000000000e'::uuid, 'Freigabe protokolliert mit Rick');
+select t_gleich((select user_id from ads_approvals where art = 'creative' limit 1), '00000000-0000-0000-0000-00000000000e'::uuid, 'Freigabe protokolliert mit Rick');
 update ads_creatives set ueberschrift = 'Dein Start';
 select t_gleich((select status::text from ads_creatives limit 1), 'entwurf', 'Änderung macht Freigabe rückgängig');
 select t_fehler($$update ads_creatives set meta_ad_id = '123'$$, 'permission denied');

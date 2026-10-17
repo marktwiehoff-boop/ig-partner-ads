@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-cream text-forest font-sans antialiased; }
+  h1, h2, h3 { @apply font-display; }
+  :focus-visible { @apply outline-none ring-2 ring-fresh ring-offset-2 ring-offset-cream; }
+}
+
+@layer components {
+  .karte { @apply bg-white rounded-2xl shadow-sm border border-forest/10 p-4; }
+  .knopf { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold min-h-[44px] transition disabled:opacity-40 disabled:cursor-not-allowed; }
+  .knopf-haupt { @apply knopf bg-forest text-cream hover:bg-dunkel; }
+  .knopf-frisch { @apply knopf bg-fresh text-forest hover:brightness-95; }
+  .knopf-rand { @apply knopf border border-forest/30 bg-white text-forest hover:bg-hell; }
+  .knopf-warn { @apply knopf bg-igred text-white hover:brightness-95; }
+  .feld { @apply w-full rounded-xl border border-forest/25 bg-white px-3 py-2.5 text-base text-forest placeholder:text-forest/40 focus:border-forest; }
+  .label { @apply block text-sm font-semibold mb-1; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+}
