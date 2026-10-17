@@ -146,7 +146,7 @@ begin
   v_inhalt_geaendert := (new.hook, new.haupttext, new.ueberschrift, new.cta_typ, new.bild_idee, new.medien)
     is distinct from (old.hook, old.haupttext, old.ueberschrift, old.cta_typ, old.bild_idee, old.medien);
 
-  if v_inhalt_geaendert and old.meta_ad_id is not null and auth.uid() is not null then
+  if v_inhalt_geaendert and coalesce(old.meta_ad_id, old.meta_video_ad_id) is not null and auth.uid() is not null then
     raise exception 'Diese Anzeige liegt schon bei Meta. Lege für Änderungen eine neue Variante an.'
       using errcode = '42501';
   end if;
@@ -159,7 +159,7 @@ begin
   if v_inhalt_geaendert then
     new.markencheck := jsonb_build_object('verstoesse', to_jsonb(ads_creative_verstoesse(new)))
       || (new.markencheck - 'verstoesse');
-    if old.status = 'freigegeben' and old.meta_ad_id is null then
+    if old.status = 'freigegeben' and coalesce(old.meta_ad_id, old.meta_video_ad_id) is null then
       new.status := 'entwurf';
       new.freigegeben_von := null;
       new.freigegeben_am := null;

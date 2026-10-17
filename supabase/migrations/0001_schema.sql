@@ -70,6 +70,7 @@ create table ads_creatives (
   freigegeben_am    timestamptz,
   meta_creative_id  text,
   meta_ad_id        text unique,
+  meta_video_ad_id  text unique,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );

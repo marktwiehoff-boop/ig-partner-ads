@@ -9,9 +9,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Tägliches Abholen der Meta-Kennzahlen, 05:15 UTC (07:15 Uhr Sommerzeit).
-[functions."kennzahlen-taeglich"]
-  schedule = "15 5 * * *"
 
 [[redirects]]
   from = "/*"
