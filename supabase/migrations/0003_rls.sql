@@ -58,7 +58,16 @@ create policy ads_jobs_anlegen on ads_jobs for insert to authenticated
 
 -- Supabase vergibt auf neue Funktionen pauschal Rechte an anon und
 -- authenticated. Erst alles entziehen, dann gezielt freigeben.
-revoke execute on all functions in schema public from public, anon;
+-- Nur ads_-Funktionen anfassen: Dieselbe Datenbank trägt auch IG-Wissen.
+do $$
+declare f regprocedure;
+begin
+  for f in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname like 'ads\_%'
+  loop
+    execute format('revoke execute on function %s from public, anon', f);
+  end loop;
+end $$;
 revoke execute on function ads_rolle_von(uuid) from authenticated;
 grant execute on function ads_ist_nutzer(), ads_darf_bedienen(), ads_ist_admin() to authenticated;
 

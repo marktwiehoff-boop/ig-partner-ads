@@ -160,3 +160,8 @@ set role anon;
 select t_fehler($$select ads_rolle_von('00000000-0000-0000-0000-00000000000a')$$, 'permission denied');
 select t_fehler($$select * from ads_regions$$, 'permission denied');
 reset role;
+
+-- 12. IG-Wissen bleibt unberührt
+set role anon;
+select t_gleich(igwissen_suche('x'), 'x', 'IG-Wissen-Funktion für anon weiter nutzbar');
+reset role;
