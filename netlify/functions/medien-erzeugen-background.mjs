@@ -22,6 +22,17 @@ function endung(url, standard) {
   return m ? m[1].toLowerCase() : standard
 }
 
+/** Vorlage wählen: gewählte ID, "keine", oder automatisch das neueste aktive Store-Foto. */
+export async function waehleReferenz(sb, wahl) {
+  if (wahl === 'keine') return null
+  if (wahl && wahl !== 'auto') {
+    return pruefe(await sb.from('ads_referenzbilder').select('id, url').eq('id', wahl).maybeSingle(), 'Vorlage laden')
+  }
+  const alle = pruefe(await sb.from('ads_referenzbilder').select('id, url, art, created_at').eq('aktiv', true), 'Vorlagen laden')
+  alle.sort((a, b) => (a.art === 'store') - (b.art === 'store') || String(a.created_at).localeCompare(String(b.created_at)))
+  return alle.at(-1) || null
+}
+
 export async function medienErzeugen(job, _user, melden = async () => {}, deps = {}) {
   const bild = deps.erzeugeBild || erzeugeBild
   const clip = deps.erzeugeClip || erzeugeClip
@@ -33,13 +44,18 @@ export async function medienErzeugen(job, _user, melden = async () => {}, deps =
   if (!c.bild_idee?.trim()) throw new Error('Die Anzeige hat keine Bildidee.')
   if (pruefeCreative(c).verstoesse.includes('Gelb in der Bildidee')) throw new Error('Die Bildidee enthält Gelb. Bitte ändern.')
 
+  const referenz = await waehleReferenz(sb, e.referenz_id)
+
   const zeit = Date.now()
   const medien = []
   for (const format of formate) {
     await melden(`Bild ${format} wird erzeugt`)
-    const b = await bild(c.bild_idee, format)
+    const b = await bild(c.bild_idee, format, { referenzUrl: referenz?.url })
     const url = await ablegen(sb, b.url, `${c.id}/${zeit}-${format.replace(':', 'x')}.${endung(b.url, 'jpg')}`, deps.fetchFn)
-    medien.push({ format: b.format || format, typ: 'bild', url, quelle: 'higgsfield', request_id: b.requestId })
+    medien.push({
+      format: b.format || format, typ: 'bild', url, quelle: 'higgsfield', request_id: b.requestId,
+      referenz_id: referenz && !b.ohneReferenz ? referenz.id : null,
+    })
   }
   if (e.mit_clip) {
     const start = medien.find((m) => m.format === '9:16') || medien[0]
@@ -55,7 +71,7 @@ export async function medienErzeugen(job, _user, melden = async () => {}, deps =
   // freigegebenes Creative, setzt die Datenbank es wieder auf Entwurf.
   const bleiben = (c.medien || []).filter((alt) => !medien.some((n) => n.typ === alt.typ && n.format === alt.format))
   pruefe(await sb.from('ads_creatives').update({ medien: [...bleiben, ...medien] }).eq('id', c.id), 'Medien speichern')
-  return { anzahl: medien.length }
+  return { anzahl: medien.length, referenz: referenz?.id || null, ohne_referenz: medien.some((m) => m.typ === 'bild' && referenz && !m.referenz_id) }
 }
 
 export default backgroundJob('medien', (job, user, melden) => medienErzeugen(job, user, melden))

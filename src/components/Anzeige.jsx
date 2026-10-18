@@ -69,7 +69,7 @@ export function MedienLeiste({ medien }) {
           ) : (
             <img src={m.url} alt={`Bild ${m.format}`} className="h-20 w-auto rounded-lg bg-hell object-cover" loading="lazy" />
           )}
-          {m.typ === 'video' ? 'Clip' : 'Bild'} {m.format}
+          {m.typ === 'video' ? 'Clip' : 'Bild'} {m.format}{m.referenz_id ? ' · mit Vorlage' : ''}
         </a>
       ))}
     </div>

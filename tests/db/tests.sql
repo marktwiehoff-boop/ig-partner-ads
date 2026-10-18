@@ -165,3 +165,17 @@ reset role;
 set role anon;
 select t_gleich(igwissen_suche('x'), 'x', 'IG-Wissen-Funktion für anon weiter nutzbar');
 reset role;
+
+-- 13. Bildvorlagen
+set role authenticated;
+select t_als('00000000-0000-0000-0000-00000000000e');
+insert into storage.objects (bucket_id, name) values ('ads-medien', 'referenzen/a.jpg');
+select t_fehler($$insert into storage.objects (bucket_id, name) values ('ads-medien', 'c1/fremd.jpg')$$, 'row-level security');
+insert into ads_referenzbilder (titel, art, pfad, url) values ('Theke Berlin', 'store', 'referenzen/a.jpg', 'https://x/a.jpg');
+select t_gleich((select erstellt_von from ads_referenzbilder), '00000000-0000-0000-0000-00000000000e'::uuid, 'Vorlage mit Rick angelegt');
+select t_fehler($$insert into ads_referenzbilder (pfad, url) values ('anderswo/b.jpg', 'x')$$, 'check');
+select t_als('00000000-0000-0000-0000-00000000000b');
+select t_gleich((select count(*) from ads_referenzbilder)::int, 1, 'Viewer sieht Vorlagen');
+select t_fehler($$insert into storage.objects (bucket_id, name) values ('ads-medien', 'referenzen/v.jpg')$$, 'row-level security');
+select t_fehler($$insert into ads_referenzbilder (pfad, url) values ('referenzen/v.jpg', 'x')$$, 'row-level security');
+reset role;

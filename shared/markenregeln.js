@@ -42,5 +42,6 @@ function feldName(feld) {
 // Bildstil, der an jeden Higgsfield-Prompt angehängt wird.
 export const BILDSTIL =
   'Natürliches Licht, echte Menschen, frische Bowls und Salate, moderne helle Store-Atmosphäre. ' +
-  'Farbwelt dunkles Waldgrün #084B32, frisches Grün #96C31E und cremiges Weiß #F4F1EA. ' +
-  'Kein Gelb, keine gelben Flächen oder Gegenstände. Kein Text, keine Schrift, keine Logos im Bild.'
+  'Farbwelt dunkles Waldgrün #084B32, frisches Grün #96C31E und Weiß. Stil und Einrichtung wie in der Bildvorlage. ' +
+  'Kein Gelb, keine gelben Flächen, Früchte oder Gegenstände. Kein Text, keine Schrift, keine Logos im Bild. ' +
+  'Gesichter vollständig im Bild, nicht am Rand angeschnitten.'

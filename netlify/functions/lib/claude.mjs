@@ -57,7 +57,11 @@ Felder:
 - haupttext: zwei bis vier kurze Sätze. Höchstens ${LIMITS.haupttext} Zeichen. Endet mit einer Einladung zum Erfolgscheck.
 - ueberschrift: Überschrift unter dem Bild. Höchstens ${LIMITS.ueberschrift} Zeichen.
 - cta_typ: Knopf der Anzeige. Erlaubt: ${Object.entries(CTA_TYPEN).map(([k, v]) => `${k} (${v})`).join(', ')}.
-- bild_idee: eine Szene für ein Foto oder einen kurzen Clip, auf Deutsch, ohne Text im Bild. Farben der Marke: dunkles Waldgrün, frisches Grün, Creme. Niemals Gelb.
+- bild_idee: eine Szene für ein Foto oder einen kurzen Clip, auf Deutsch, ohne Text, Logos oder Schriftzüge im Bild.
+  Zeige immergrün so, wie es im Wissen beschrieben ist: ein Store im Shoppingcenter, in der Innenstadt oder am Bahnhof,
+  Smoothies, Säfte, Bowls und Salate live vor dem Gast zubereitet, das Team in gebrandeter Arbeitskleidung (Shirt, Schürze, Cap).
+  Farben der Marke: dunkles Waldgrün, frisches Grün, Weiß. Nur grünes Obst und Gemüse zeigen. Das Wort für die verbotene Farbe kommt in der Bildidee gar nicht vor, auch nicht verneint.
+  Es wird zusätzlich ein echtes Foto aus einem immergrün Store als Vorlage mitgegeben. Beschreibe die Szene so, dass sie dazu passt.
 
 Motive:
 ${Object.entries(MOTIVE).map(([k, m]) => `- ${k}: ${m.titel}. ${m.idee}`).join('\n')}`

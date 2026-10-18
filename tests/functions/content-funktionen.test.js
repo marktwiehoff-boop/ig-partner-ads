@@ -12,7 +12,7 @@ const { ladeMarkenwissen, leereWissenCache } = await import('../../netlify/funct
 const { erzeugeBild, bildPrompt, modellFormat } = await import('../../netlify/functions/lib/higgsfield.mjs')
 const { nutzerPruefen } = await import('../../netlify/functions/lib/auth.mjs')
 const { texteErzeugen } = await import('../../netlify/functions/texte-erzeugen-background.mjs')
-const { medienErzeugen } = await import('../../netlify/functions/medien-erzeugen-background.mjs')
+const { medienErzeugen, waehleReferenz } = await import('../../netlify/functions/medien-erzeugen-background.mjs')
 
 const region = { id: 'r1', name: 'Ostbayern', umkreis_km: 25, staedte: [{ name: 'Regensburg' }, { name: 'Passau' }] }
 const wissen = { text: '<dokument pfad="content/01_Marke_Branding/immergruen-markenstimme.md">Du und ihr.</dokument>', dateien: ['content/01_Marke_Branding/immergruen-markenstimme.md'] }
@@ -210,5 +210,43 @@ describe('Background-Jobs Inhalte', () => {
   it('Gelb in der Bildidee stoppt die Bilderzeugung', async () => {
     zustand.sb = fakeSupabase({ ads_creatives: [{ id: 'c1', bild_idee: 'gelbe Bowl', medien: [] }] })
     await expect(medienErzeugen({ eingabe: { creative_id: 'c1' } }, {}, async () => {}, { erzeugeBild: vi.fn() })).rejects.toThrow(/Gelb/)
+  })
+})
+
+describe('Bildvorlagen', () => {
+  it('gibt die Vorlage an Higgsfield mit', async () => {
+    process.env.HF_CREDENTIALS = 'id:geheim'
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(Response.json({ request_id: 'r1', status: 'completed', images: [{ url: 'https://hf.test/b.jpg' }] }))
+    const r = await erzeugeBild('Theke', '1:1', { fetchFn, referenzUrl: 'https://speicher.test/referenzen/a.jpg' })
+    expect(JSON.parse(fetchFn.mock.calls[0][1].body).image_reference).toEqual({ type: 'image_url', image_url: 'https://speicher.test/referenzen/a.jpg' })
+    expect(r.ohneReferenz).toBe(false)
+  })
+
+  it('kennt das Modell keine Vorlage, kommt das Bild ohne Vorlage', async () => {
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(Response.json({ detail: [{ loc: ['body', 'image_reference'], msg: 'Extra inputs are not permitted' }] }, { status: 422 }))
+      .mockResolvedValueOnce(Response.json({ request_id: 'r2', status: 'completed', images: [{ url: 'https://hf.test/c.jpg' }] }))
+    const r = await erzeugeBild('Theke', '1:1', { fetchFn, referenzUrl: 'https://x/a.jpg' })
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(fetchFn.mock.calls[1][1].body).image_reference).toBeUndefined()
+    expect(r.ohneReferenz).toBe(true)
+  })
+
+  it('andere 422-Fehler werden nicht verschluckt', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce(Response.json({ detail: [{ loc: ['body', 'prompt'], msg: 'zu lang' }] }, { status: 422 }))
+    await expect(erzeugeBild('x', '1:1', { fetchFn, referenzUrl: 'https://x/a.jpg' })).rejects.toThrow('prompt: zu lang')
+  })
+
+  it('automatisch wird das neueste aktive Store-Foto gewählt', async () => {
+    zustand.sb = fakeSupabase({ ads_referenzbilder: [
+      { id: 'p1', url: 'p', art: 'produkt', aktiv: true, created_at: '2026-10-03' },
+      { id: 's1', url: 's1', art: 'store', aktiv: true, created_at: '2026-10-01' },
+      { id: 's2', url: 's2', art: 'store', aktiv: true, created_at: '2026-10-02' },
+      { id: 's3', url: 's3', art: 'store', aktiv: false, created_at: '2026-10-04' },
+    ] })
+    expect((await waehleReferenz(zustand.sb, 'auto')).id).toBe('s2')
+    expect(await waehleReferenz(zustand.sb, 'keine')).toBeNull()
+    expect((await waehleReferenz(zustand.sb, 'p1')).id).toBe('p1')
   })
 })

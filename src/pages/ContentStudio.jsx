@@ -4,6 +4,7 @@ import { jobAusfuehren } from '../lib/api.js'
 import { useAuth } from '../context/Auth.jsx'
 import { Seite, Meldung, Laden, Chip } from '../components/Teile.jsx'
 import { AnzeigeVorschau, MarkenCheck, MotivChip, MedienLeiste } from '../components/Anzeige.jsx'
+import { BildVorlagen, VorlagenWahl } from '../components/BildVorlagen.jsx'
 import { MOTIVE, CTA_TYPEN, MOTIV_SCHLUESSEL } from '../../shared/motive.js'
 
 const STATUS_TEXT = { entwurf: 'Entwurf', freigegeben: 'Freigegeben', abgelehnt: 'Abgelehnt', archiviert: 'Archiviert' }
@@ -14,6 +15,13 @@ export default function ContentStudio() {
   const [regionId, setRegionId] = useState('')
   const [creatives, setCreatives] = useState(null)
   const [filter, setFilter] = useState('offen')
+  const [vorlagen, setVorlagen] = useState([])
+
+  const vorlagenLaden = useCallback(async () => {
+    const { data } = await supabase.from('ads_referenzbilder').select('*').order('created_at', { ascending: false })
+    setVorlagen(data || [])
+  }, [])
+  useEffect(() => { vorlagenLaden() }, [vorlagenLaden])
 
   useEffect(() => {
     supabase.from('ads_regions').select('id, name, slug, staedte, umkreis_km').eq('aktiv', true).order('name').then(({ data }) => {
@@ -42,6 +50,7 @@ export default function ContentStudio() {
       </div>
 
       {darfBedienen && regionId && <Erzeugen regionId={regionId} onFertig={laden} />}
+      <BildVorlagen vorlagen={vorlagen} darf={darfBedienen} onGeaendert={vorlagenLaden} />
 
       <div className="mb-3 mt-6 flex gap-2" role="group" aria-label="Filter">
         {[['offen', 'In Arbeit'], ['freigegeben', 'Freigegeben'], ['archiviert', 'Archiv']].map(([k, t]) => (
@@ -51,7 +60,7 @@ export default function ContentStudio() {
       {!creatives ? <Laden /> : sichtbar.length === 0 ? (
         <p className="text-sm text-slate-500">Hier ist noch nichts.</p>
       ) : (
-        <div className="space-y-4">{sichtbar.map((c) => <CreativeKarte key={c.id} creative={c} onGeaendert={laden} />)}</div>
+        <div className="space-y-4">{sichtbar.map((c) => <CreativeKarte key={c.id} creative={c} vorlagen={vorlagen} onGeaendert={laden} />)}</div>
       )}
     </Seite>
   )
@@ -114,12 +123,13 @@ function Erzeugen({ regionId, onFertig }) {
   )
 }
 
-function CreativeKarte({ creative, onGeaendert }) {
+function CreativeKarte({ creative, vorlagen, onGeaendert }) {
   const { darfBedienen } = useAuth()
   const [c, setC] = useState(creative)
   const [meldung, setMeldung] = useState(null)
   const [arbeit, setArbeit] = useState(null)
   const [mitClip, setMitClip] = useState(false)
+  const [vorlage, setVorlage] = useState('auto')
   useEffect(() => setC(creative), [creative])
 
   const beiMeta = Boolean(creative.meta_ad_id || creative.meta_video_ad_id)
@@ -139,8 +149,11 @@ function CreativeKarte({ creative, onGeaendert }) {
     setMeldung(null)
     setArbeit(start)
     try {
-      await jobAusfuehren(art, eingabe, setArbeit)
-      setMeldung({ art: 'ok', text: art === 'medien' ? 'Bilder sind fertig.' : 'Neue Variante liegt oben in der Liste.' })
+      const r = await jobAusfuehren(art, eingabe, setArbeit)
+      const text = art !== 'medien' ? 'Neue Variante liegt oben in der Liste.'
+        : r?.ohne_referenz ? 'Bilder sind fertig, aber ohne Vorlage: Das Higgsfield-Modell nimmt keine Vorlage an.'
+          : r?.referenz ? 'Bilder sind fertig, mit Vorlage.' : 'Bilder sind fertig.'
+      setMeldung({ art: 'ok', text })
       onGeaendert()
     } catch (e) {
       setMeldung({ art: 'fehler', text: e.message })
@@ -185,9 +198,10 @@ function CreativeKarte({ creative, onGeaendert }) {
           {bearbeitbar && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <button className="knopf-haupt" onClick={speichern} disabled={!geaendert}>Speichern</button>
-              <button className="knopf-rand" disabled={Boolean(arbeit) || geaendert} onClick={() => job('medien', { creative_id: c.id, mit_clip: mitClip }, 'Higgsfield malt …')}>
+              <button className="knopf-rand" disabled={Boolean(arbeit) || geaendert} onClick={() => job('medien', { creative_id: c.id, mit_clip: mitClip, referenz_id: vorlage }, 'Higgsfield malt …')}>
                 {creative.medien?.length ? 'Bilder neu erzeugen' : 'Bilder erzeugen'}
               </button>
+              <VorlagenWahl id={`vorlage-${c.id}`} vorlagen={vorlagen} wert={vorlage} onChange={setVorlage} />
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" className="h-5 w-5 accent-forest" checked={mitClip} onChange={(e) => setMitClip(e.target.checked)} /> mit Clip 9:16
               </label>

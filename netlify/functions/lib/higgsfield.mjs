@@ -64,16 +64,25 @@ export function modellFormat(modell, format) {
 
 export async function erzeugeBild(bildIdee, format, opts = {}) {
   const modell = process.env.HF_BILD_MODELL || 'higgsfield-ai/soul/standard'
-  const start = await anfrage(modell, {
-    methode: 'POST',
-    body: { prompt: bildPrompt(bildIdee), aspect_ratio: modellFormat(modell, format) },
-    fetchFn: opts.fetchFn,
-  })
+  const body = { prompt: bildPrompt(bildIdee), aspect_ratio: modellFormat(modell, format) }
+  if (opts.referenzUrl) body.image_reference = { type: 'image_url', image_url: opts.referenzUrl }
+
+  let start
+  let ohneReferenz = false
+  try {
+    start = await anfrage(modell, { methode: 'POST', body, fetchFn: opts.fetchFn })
+  } catch (e) {
+    // Kennt das Modell keine Bildvorlage, lieber ohne Vorlage als gar kein Bild.
+    if (!opts.referenzUrl || !/422/.test(e.message) || !/image_reference|extra/i.test(e.message)) throw e
+    delete body.image_reference
+    ohneReferenz = true
+    start = await anfrage(modell, { methode: 'POST', body, fetchFn: opts.fetchFn })
+  }
   if (!start.request_id) throw new Error('Higgsfield hat keine request_id geliefert.')
   const fertig = start.status === 'completed' ? start : await warteAufErgebnis(start.request_id, opts)
   const url = fertig.images?.[0]?.url
   if (!url) throw new Error('Higgsfield hat kein Bild geliefert.')
-  return { url, requestId: start.request_id, format: modellFormat(modell, format) }
+  return { url, requestId: start.request_id, format: modellFormat(modell, format), ohneReferenz }
 }
 
 export async function erzeugeClip(bildIdee, startbildUrl, opts = {}) {

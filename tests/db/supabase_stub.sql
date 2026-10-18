@@ -24,3 +24,7 @@ alter default privileges in schema public grant all on sequences to anon, authen
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 -- Eine fremde Funktion wie in IG-Wissen: Partner-Ads darf ihre Rechte nicht ändern.
 create or replace function public.igwissen_suche(q text) returns text language sql as $$ select q $$;
+create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated, anon;
+grant select, insert, delete on storage.objects to authenticated;
