@@ -76,7 +76,7 @@ export default function Dashboard() {
     >
       <div className="mb-4 flex gap-2" role="group" aria-label="Zeitraum">
         {ZEITRAEUME.map(([k, t]) => (
-          <button key={k} onClick={() => setArt(k)} aria-pressed={art === k} className={`rounded-full px-4 py-2 text-sm font-semibold ${art === k ? 'bg-forest text-cream' : 'bg-white text-forest border border-forest/20'}`}>{t}</button>
+          <button key={k} onClick={() => setArt(k)} aria-pressed={art === k} className={`rounded-full px-4 py-2 text-sm font-semibold ${art === k ? 'bg-forest text-white' : 'bg-white text-forest border border-ig-hairline'}`}>{t}</button>
         ))}
       </div>
       <div className="mb-4"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
@@ -109,7 +109,7 @@ export default function Dashboard() {
           <ul className="space-y-1 text-sm">
             {daten.protokoll.map((p) => (
               <li key={p.id}>
-                <span className="text-forest/60">{datumZeit(p.created_at)}</span>{' '}
+                <span className="text-slate-500">{datumZeit(p.created_at)}</span>{' '}
                 {p.ereignis === 'schutzpause' ? <>Schutzpause: {p.details.grund}</> : <>Kennzahlen abgeholt ({p.details.zeilen} Zeilen)</>}
               </li>
             ))}
@@ -124,10 +124,10 @@ export default function Dashboard() {
 
 function Kachel({ titel, wert, unter, hervor }) {
   return (
-    <div className={`rounded-2xl p-4 ${hervor ? 'bg-forest text-cream' : 'bg-white border border-forest/10'}`}>
-      <div className={`text-xs font-semibold uppercase tracking-wide ${hervor ? 'text-fresh' : 'text-forest/60'}`}>{titel}</div>
+    <div className={`rounded-2xl p-4 ${hervor ? 'bg-forest text-white' : 'bg-white border border-ig-hairline'}`}>
+      <div className={`text-xs font-semibold uppercase tracking-wide ${hervor ? 'text-fresh' : 'text-slate-500'}`}>{titel}</div>
       <div className="mt-1 font-display text-2xl">{wert}</div>
-      {unter && <div className={`mt-1 text-xs ${hervor ? 'text-cream/70' : 'text-forest/60'}`}>{unter}</div>}
+      {unter && <div className={`mt-1 text-xs ${hervor ? 'text-white/70' : 'text-slate-500'}`}>{unter}</div>}
     </div>
   )
 }
@@ -139,7 +139,7 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-2xl">{region.name}</h2>
-          <p className="text-xs text-forest/60">{(region.staedte || []).map((s) => s.name).join(', ')} · {region.umkreis_km} km Umkreis</p>
+          <p className="text-xs text-slate-500">{(region.staedte || []).map((s) => s.name).join(', ')} · {region.umkreis_km} km Umkreis</p>
         </div>
         <Chip farbe={status.farbe}>{status.text}</Chip>
       </div>
@@ -147,7 +147,7 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
       <div className="mt-3">
         <div className="mb-1 flex justify-between text-xs">
           <span>Ausgaben im Monat: <strong>{euro(ausgabenMonat)}</strong> von {euro(region.monatsbudget_eur)}</span>
-          <span className="text-forest/60">Obergrenze {euro(region.obergrenze_eur)}</span>
+          <span className="text-slate-500">Obergrenze {euro(region.obergrenze_eur)}</span>
         </div>
         <Balken wert={ausgabenMonat} max={Number(region.obergrenze_eur)} grenze={Number(region.monatsbudget_eur)} />
       </div>
@@ -156,7 +156,7 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
-            <tr className="text-left text-xs text-forest/60">
+            <tr className="text-left text-xs text-slate-500">
               <th className="py-1 pr-2 font-semibold">Motiv</th>
               <th className="py-1 pr-2 text-right font-semibold">Ausgaben</th>
               <th className="py-1 pr-2 text-right font-semibold">Leads</th>
@@ -166,20 +166,20 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
             </tr>
           </thead>
           <tbody>
-            {zeilen.length === 0 && <tr><td colSpan={6} className="py-3 text-forest/60">Noch keine Zahlen im Zeitraum.</td></tr>}
+            {zeilen.length === 0 && <tr><td colSpan={6} className="py-3 text-slate-500">Noch keine Zahlen im Zeitraum.</td></tr>}
             {zeilen.map((z) => (
-              <tr key={z.motiv || 'ohne'} className="border-t border-forest/10">
+              <tr key={z.motiv || 'ohne'} className="border-t border-ig-hairline">
                 <td className="py-2 pr-2">{MOTIVE[z.motiv]?.titel || 'Ohne Zuordnung'}</td>
                 <td className="py-2 pr-2 text-right">{euro(z.ausgaben_eur)}</td>
-                <td className="py-2 pr-2 text-right">{anzahl(z.leads)} <span className="text-forest/50">({anzahl(z.leads_meta)})</span></td>
+                <td className="py-2 pr-2 text-right">{anzahl(z.leads)} <span className="text-slate-500">({anzahl(z.leads_meta)})</span></td>
                 <td className="py-2 pr-2 text-right">{anzahl(z.gute_leads)}</td>
                 <td className="py-2 pr-2 text-right font-semibold">{euro(z.kosten_pro_gutem_lead)}</td>
-                <td className="py-2 text-right text-forest/50" title="Kommt mit der CRM-Anbindung in Phase 4">–</td>
+                <td className="py-2 text-right text-slate-500" title="Kommt mit der CRM-Anbindung in Phase 4">–</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-1 text-[11px] text-forest/50">Leads aus dem Erfolgscheck, in Klammern die Zählung von Meta.</p>
+        <p className="mt-1 text-[11px] text-slate-500">Leads aus dem Erfolgscheck, in Klammern die Zählung von Meta.</p>
       </div>
 
       {darfBedienen && kampagne?.meta_campaign_id && (
@@ -187,7 +187,7 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
           {kampagne.status !== 'live' && <button className="knopf-frisch" onClick={() => onSchalten('live')} disabled={!anzeigenBeiMeta}>Live schalten</button>}
           {kampagne.status === 'live' && <button className="knopf-rand" onClick={() => onSchalten('live')}>Neue Anzeigen live schalten</button>}
           {kampagne.status === 'live' && <button className="knopf-warn" onClick={() => onSchalten('pause')}>Pausieren</button>}
-          <span className="self-center text-xs text-forest/60">{anzeigenBeiMeta} freigegebene Anzeige(n) bei Meta · Tagesbudget {euro((kampagne.tagesbudget_cent || 0) / 100)}</span>
+          <span className="self-center text-xs text-slate-500">{anzeigenBeiMeta} freigegebene Anzeige(n) bei Meta · Tagesbudget {euro((kampagne.tagesbudget_cent || 0) / 100)}</span>
         </div>
       )}
     </section>

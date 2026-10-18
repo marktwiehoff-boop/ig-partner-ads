@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/Auth.jsx'
+import logoDisc from '../assets/logo-disc.png'
 
 const PUNKTE = [
   { zu: '/', text: 'Dashboard', icon: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z' },
@@ -14,20 +15,23 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 bg-forest text-cream shadow">
+      <header className="sticky top-0 z-20 border-b border-ig-hairline bg-ig-50/95 backdrop-blur pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <img src="/favicon.svg" alt="" className="h-8 w-8" />
-            <span className="font-display text-xl">immergrün <span className="text-fresh">Partner-Ads</span></span>
+          <div className="flex items-center gap-3">
+            <img src={logoDisc} alt="immergrün" className="h-9 w-9 rounded-full" />
+            <div className="leading-tight">
+              <div className="font-display text-xl text-ig-900">Partner-Ads</div>
+              <div className="text-[11px] text-slate-500">Franchise-Partnersuche</div>
+            </div>
           </div>
           <nav className="hidden gap-1 md:flex" aria-label="Hauptmenü">
             {punkte.map((p) => (
-              <NavLink key={p.zu} to={p.zu} end className={({ isActive }) => `rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? 'bg-fresh text-forest' : 'hover:bg-dunkel'}`}>
+              <NavLink key={p.zu} to={p.zu} end className={({ isActive }) => `rounded-full px-4 py-2 text-sm font-bold ${isActive ? 'bg-forest text-white' : 'text-ig-800 hover:bg-ig-100'}`}>
                 {p.text}
               </NavLink>
             ))}
           </nav>
-          <button onClick={abmelden} className="rounded-lg px-2 py-2 text-xs text-cream/80 hover:bg-dunkel" title={profil?.email}>
+          <button onClick={abmelden} className="rounded-full px-3 py-2 text-xs font-bold text-ig-700 hover:bg-ig-100" title={profil?.email}>
             Abmelden
           </button>
         </div>
@@ -35,13 +39,13 @@ export default function Layout() {
 
       <main><Outlet /></main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-forest/10 bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Hauptmenü">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ig-hairline bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Hauptmenü">
         <div className="flex">
           {punkte.map((p) => (
-            <NavLink key={p.zu} to={p.zu} end className={({ isActive }) => `flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${isActive ? 'text-forest' : 'text-forest/50'}`}>
+            <NavLink key={p.zu} to={p.zu} end className={({ isActive }) => `flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${isActive ? 'text-forest' : 'text-slate-400'}`}>
               {({ isActive }) => (
                 <>
-                  <svg viewBox="0 0 24 24" className={`h-6 w-6 ${isActive ? 'fill-forest' : 'fill-forest/40'}`} aria-hidden="true"><path d={p.icon} /></svg>
+                  <svg viewBox="0 0 24 24" className={`h-6 w-6 ${isActive ? 'fill-forest' : 'fill-slate-300'}`} aria-hidden="true"><path d={p.icon} /></svg>
                   {p.text}
                 </>
               )}

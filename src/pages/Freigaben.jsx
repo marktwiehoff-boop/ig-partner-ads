@@ -41,7 +41,7 @@ export default function Freigaben() {
   return (
     <Seite titel="Freigaben" unter="Nichts geht zu Meta, bevor ein Mensch es freigibt.">
       <h2 className="mb-3 text-xl">Bereit zur Freigabe ({bereit.length})</h2>
-      {bereit.length === 0 && <p className="text-sm text-forest/60">Gerade wartet nichts auf dich.</p>}
+      {bereit.length === 0 && <p className="text-sm text-slate-500">Gerade wartet nichts auf dich.</p>}
       <div className="space-y-4">
         {bereit.map((c) => <FreigabeKarte key={c.id} creative={c} region={regionName(c.region_id)} darf={darfBedienen} onFertig={laden} />)}
       </div>
@@ -63,12 +63,12 @@ export default function Freigaben() {
 
       <div className="karte mt-6">
         <h2 className="mb-2 text-xl">Verlauf</h2>
-        {daten.verlauf.length === 0 ? <p className="text-sm text-forest/60">Noch keine Entscheidungen.</p> : (
-          <ul className="divide-y divide-forest/10 text-sm">
+        {daten.verlauf.length === 0 ? <p className="text-sm text-slate-500">Noch keine Entscheidungen.</p> : (
+          <ul className="divide-y divide-ig-hairline text-sm">
             {daten.verlauf.map((a) => (
               <li key={a.id} className="flex flex-wrap justify-between gap-2 py-2">
-                <span><strong>{ART_TEXT[a.art]}</strong> {a.entscheidung === 'abgelehnt' ? 'abgelehnt' : ''} {a.kommentar && <span className="text-forest/60">„{a.kommentar}“</span>}</span>
-                <span className="text-forest/60">{wer(a.user_id)} · {datumZeit(a.created_at)}</span>
+                <span><strong>{ART_TEXT[a.art]}</strong> {a.entscheidung === 'abgelehnt' ? 'abgelehnt' : ''} {a.kommentar && <span className="text-slate-500">„{a.kommentar}“</span>}</span>
+                <span className="text-slate-500">{wer(a.user_id)} · {datumZeit(a.created_at)}</span>
               </li>
             ))}
           </ul>
@@ -97,7 +97,7 @@ function FreigabeKarte({ creative, region, darf, onFertig }) {
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2"><MotivChip motiv={creative.motiv} /><span className="text-sm font-semibold">{region}</span></div>
         <MarkenCheck creative={creative} />
-        <p className="text-xs text-forest/60">Bilder: {creative.medien.map((m) => `${m.typ === 'video' ? 'Clip' : 'Bild'} ${m.format}`).join(', ')}</p>
+        <p className="text-xs text-slate-500">Bilder: {creative.medien.map((m) => `${m.typ === 'video' ? 'Clip' : 'Bild'} ${m.format}`).join(', ')}</p>
         {darf ? (
           <>
             <label className="label" htmlFor={`k-${creative.id}`}>Notiz (optional)</label>
@@ -106,9 +106,9 @@ function FreigabeKarte({ creative, region, darf, onFertig }) {
               <button className="knopf-haupt flex-1" disabled={laeuft} onClick={() => entscheiden('freigegeben')}>Freigeben</button>
               <button className="knopf-rand flex-1" disabled={laeuft} onClick={() => entscheiden('abgelehnt')}>Ablehnen</button>
             </div>
-            <p className="text-xs text-forest/60">Freigegeben heißt noch nicht live. Danach legst du die Anzeige unter Regionen pausiert bei Meta an.</p>
+            <p className="text-xs text-slate-500">Freigegeben heißt noch nicht live. Danach legst du die Anzeige unter Regionen pausiert bei Meta an.</p>
           </>
-        ) : <p className="text-sm text-forest/60">Freigeben dürfen Admin und Expansion.</p>}
+        ) : <p className="text-sm text-slate-500">Freigeben dürfen Admin und Expansion.</p>}
         <Meldung art="fehler">{fehler}</Meldung>
       </div>
     </article>

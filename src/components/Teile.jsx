@@ -6,7 +6,7 @@ export function Seite({ titel, unter, aktion, children }) {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl leading-tight">{titel}</h1>
-          {unter && <p className="mt-1 text-sm text-forest/70">{unter}</p>}
+          {unter && <p className="mt-1 text-sm text-slate-500">{unter}</p>}
         </div>
         {aktion}
       </div>
@@ -18,7 +18,7 @@ export function Seite({ titel, unter, aktion, children }) {
 export function Meldung({ art = 'info', children }) {
   if (!children) return null
   const farbe = {
-    info: 'bg-hell text-forest',
+    info: 'bg-ig-100 text-ig-800',
     ok: 'bg-fresh/25 text-forest',
     fehler: 'bg-igred/10 text-igred border border-igred/30',
   }[art]
@@ -27,14 +27,14 @@ export function Meldung({ art = 'info', children }) {
 
 export function Laden({ text = 'Lädt …' }) {
   return (
-    <div className="flex items-center gap-3 py-6 text-sm text-forest/70" role="status">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-forest/20 border-t-forest" />
+    <div className="flex items-center gap-3 py-6 text-sm text-slate-500" role="status">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-ig-hairline border-t-forest" />
       {text}
     </div>
   )
 }
 
-export function Chip({ farbe = 'bg-hell text-forest', children }) {
+export function Chip({ farbe = 'bg-ig-100 text-ig-800', children }) {
   return <span className={`chip ${farbe}`}>{children}</span>
 }
 
@@ -51,7 +51,7 @@ export function Dialog({ offen, titel, children, onSchliessen }) {
     <dialog
       ref={ref}
       onClose={onSchliessen}
-      className="w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-cream p-0 text-forest backdrop:bg-dunkel/60"
+      className="w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-ig-50 p-0 text-forest backdrop:bg-dunkel/60"
     >
       {offen && (
         <div className="p-5">

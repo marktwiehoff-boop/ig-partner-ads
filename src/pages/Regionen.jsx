@@ -90,7 +90,7 @@ function Gesamt({ einst, summe, istAdmin, onGespeichert }) {
           <div className="md:col-span-3"><button className="knopf-haupt">Speichern</button></div>
         </div>
       ) : (
-        <p className="mt-2 text-sm text-forest/70">Gesamt-Obergrenze und Landingpage legt Mark fest.</p>
+        <p className="mt-2 text-sm text-slate-500">Gesamt-Obergrenze und Landingpage legt Mark fest.</p>
       )}
       <div className="mt-3"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
     </form>
@@ -170,12 +170,12 @@ function RegionFormular({ region, kampagne, bereit = 0, neu, onFertig }) {
           <div>
             <label className="label" htmlFor={`budget-${region?.id || 'neu'}`}>Monatsbudget (€)</label>
             <input id={`budget-${region?.id || 'neu'}`} className="feld" type="number" min="0" step="1" value={f.monatsbudget_eur} onChange={(e) => setze('monatsbudget_eur', e.target.value)} />
-            <p className="mt-1 text-xs text-forest/60">= {euro(tbNeu / 100)} pro Tag</p>
+            <p className="mt-1 text-xs text-slate-500">= {euro(tbNeu / 100)} pro Tag</p>
           </div>
           <div>
             <label className="label" htmlFor={`grenze-${region?.id || 'neu'}`}>Obergrenze (€)</label>
             <input id={`grenze-${region?.id || 'neu'}`} className="feld" type="number" min="0" step="1" disabled={!istAdmin} value={f.obergrenze_eur} onChange={(e) => setze('obergrenze_eur', e.target.value)} />
-            {!istAdmin && <p className="mt-1 text-xs text-forest/60">Legt Mark fest.</p>}
+            {!istAdmin && <p className="mt-1 text-xs text-slate-500">Legt Mark fest.</p>}
           </div>
         </div>
         <label className="flex items-center gap-2 text-sm">
@@ -198,7 +198,7 @@ function RegionFormular({ region, kampagne, bereit = 0, neu, onFertig }) {
         </div>
       )}
       {!neu && bereit === 0 && !kampagne?.meta_campaign_id && darfBedienen && (
-        <p className="mt-2 text-xs text-forest/60">Zum Anlegen brauchst du mindestens eine freigegebene Anzeige mit Bild.</p>
+        <p className="mt-2 text-xs text-slate-500">Zum Anlegen brauchst du mindestens eine freigegebene Anzeige mit Bild.</p>
       )}
       {arbeit && <div className="mt-3"><Laden text={arbeit} /></div>}
       <div className="mt-3"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
@@ -233,7 +233,7 @@ function BudgetDialog({ offen, region, kampagne, onFertig }) {
   return (
     <Dialog offen={offen} titel="Budget an Meta übertragen" onSchliessen={() => onFertig(null)}>
       <p className="text-sm">Tagesbudget bei Meta: <strong>{euro(alt / 100)}</strong> wird zu <strong>{euro(neu / 100)}</strong>.</p>
-      <p className="mt-1 text-xs text-forest/60">Monatsbudget {euro(region.monatsbudget_eur)} geteilt durch 31 Tage. So bleibt auch der längste Monat im Rahmen.</p>
+      <p className="mt-1 text-xs text-slate-500">Monatsbudget {euro(region.monatsbudget_eur)} geteilt durch 31 Tage. So bleibt auch der längste Monat im Rahmen.</p>
       <label className="mt-3 flex items-start gap-3 rounded-xl bg-white p-3 text-sm">
         <input type="checkbox" className="mt-0.5 h-5 w-5 accent-forest" checked={ok} onChange={(e) => setOk(e.target.checked)} />
         <span>Ich gebe dieses Tagesbudget frei.</span>
@@ -269,10 +269,10 @@ function StaedteWahl({ staedte, onChange }) {
         {staedte.map((s) => (
           <span key={s.name} className="chip bg-hell py-1 text-sm">
             {s.name}
-            <button type="button" aria-label={`${s.name} entfernen`} className="ml-1 px-1 text-forest/60 hover:text-igred" onClick={() => onChange(staedte.filter((x) => x !== s))}>×</button>
+            <button type="button" aria-label={`${s.name} entfernen`} className="ml-1 px-1 text-slate-500 hover:text-igred" onClick={() => onChange(staedte.filter((x) => x !== s))}>×</button>
           </span>
         ))}
-        {staedte.length === 0 && <span className="text-sm text-forest/60">Noch keine Stadt.</span>}
+        {staedte.length === 0 && <span className="text-sm text-slate-500">Noch keine Stadt.</span>}
       </div>
       <div className="mt-2 flex gap-2">
         <input className="feld" placeholder="Stadt suchen, z. B. Landshut" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); suchen() } }} />
@@ -280,11 +280,11 @@ function StaedteWahl({ staedte, onChange }) {
       </div>
       {fehler && <p className="mt-1 text-xs text-igred">{fehler}</p>}
       {treffer.length > 0 && (
-        <ul className="mt-2 divide-y divide-forest/10 rounded-xl border border-forest/15 bg-white">
+        <ul className="mt-2 divide-y divide-ig-hairline rounded-xl border border-ig-hairline bg-white">
           {treffer.map((t) => (
             <li key={`${t.lat}-${t.lng}`}>
               <button type="button" className="w-full px-3 py-2 text-left text-sm hover:bg-hell" onClick={() => { onChange([...staedte, { name: t.name, lat: t.lat, lng: t.lng }]); setTreffer([]); setQ('') }}>
-                <strong>{t.name}</strong> <span className="text-forest/60">{t.beschreibung}</span>
+                <strong>{t.name}</strong> <span className="text-slate-500">{t.beschreibung}</span>
               </button>
             </li>
           ))}

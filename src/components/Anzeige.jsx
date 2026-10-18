@@ -2,14 +2,15 @@ import { CTA_TYPEN, MOTIVE } from '../../shared/motive.js'
 import { pruefeCreative } from '../../shared/markenregeln.js'
 import { waehleBild } from '../../shared/meta-payload.js'
 import { Chip } from './Teile.jsx'
+import logoDisc from '../assets/logo-disc.png'
 
 /** Vorschau so, wie die Anzeige im Facebook- oder Instagram-Feed aussieht. */
 export function AnzeigeVorschau({ creative, domain = 'erfolgscheck' }) {
   const bild = waehleBild(creative.medien)
   return (
-    <div className="mx-auto w-full max-w-sm overflow-hidden rounded-xl border border-forest/15 bg-white text-[15px] text-neutral-900 shadow-sm">
+    <div className="mx-auto w-full max-w-sm overflow-hidden rounded-xl border border-ig-hairline bg-white text-[15px] text-neutral-900 shadow-sm">
       <div className="flex items-center gap-2 p-3">
-        <img src="/favicon.svg" alt="" className="h-9 w-9 rounded-full" />
+        <img src={logoDisc} alt="" className="h-9 w-9 rounded-full" />
         <div className="leading-tight">
           <div className="font-semibold">immergrün</div>
           <div className="text-xs text-neutral-500">Gesponsert</div>
@@ -23,7 +24,7 @@ export function AnzeigeVorschau({ creative, domain = 'erfolgscheck' }) {
         {bild ? (
           <img src={bild.url} alt={creative.bild_idee || 'Anzeigenbild'} className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-forest/60">
+          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-slate-500">
             Noch kein Bild.<br />{creative.bild_idee}
           </div>
         )}
@@ -48,7 +49,7 @@ export function MarkenCheck({ creative }) {
   return (
     <div className="space-y-1">
       {verstoesse.map((v) => <div key={v}><Chip farbe="bg-igred text-white">{v}</Chip></div>)}
-      {hinweise.map((h) => <p key={h} className="text-xs text-forest/70">{h}</p>)}
+      {hinweise.map((h) => <p key={h} className="text-xs text-slate-500">{h}</p>)}
     </div>
   )
 }
@@ -62,7 +63,7 @@ export function MedienLeiste({ medien }) {
   return (
     <div className="flex flex-wrap gap-2">
       {medien.map((m) => (
-        <a key={`${m.typ}-${m.format}`} href={m.url} target="_blank" rel="noreferrer" className="block text-center text-[11px] text-forest/70">
+        <a key={`${m.typ}-${m.format}`} href={m.url} target="_blank" rel="noreferrer" className="block text-center text-[11px] text-slate-500">
           {m.typ === 'video' ? (
             <video src={m.url} poster={m.vorschau} muted playsInline className="h-20 w-auto rounded-lg bg-hell object-cover" />
           ) : (

@@ -43,15 +43,15 @@ export default function Nutzer() {
         </div>
         <div className="md:col-span-4">
           <button className="knopf-haupt">Hinzufügen oder ändern</button>
-          <p className="mt-2 text-xs text-forest/60">Die Person muss sich vorher einmal mit dem Login-Link angemeldet haben.</p>
+          <p className="mt-2 text-xs text-slate-500">Die Person muss sich vorher einmal mit dem Login-Link angemeldet haben.</p>
         </div>
       </form>
       <div className="mt-3"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
       {!liste ? <Laden /> : (
-        <ul className="karte mt-4 divide-y divide-forest/10">
+        <ul className="karte mt-4 divide-y divide-ig-hairline">
           {liste.map((n) => (
             <li key={n.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-              <span><strong>{n.name || n.email}</strong> <span className="text-sm text-forest/60">{n.email}</span></span>
+              <span><strong>{n.name || n.email}</strong> <span className="text-sm text-slate-500">{n.email}</span></span>
               <select aria-label={`Rolle von ${n.email}`} className="feld w-auto" value={n.rolle} onChange={(e) => setzen(null, { email: n.email, rolle: e.target.value })}>
                 {Object.entries(ROLLEN).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
               </select>

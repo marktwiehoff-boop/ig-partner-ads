@@ -45,11 +45,11 @@ export default function ContentStudio() {
 
       <div className="mb-3 mt-6 flex gap-2" role="group" aria-label="Filter">
         {[['offen', 'In Arbeit'], ['freigegeben', 'Freigegeben'], ['archiviert', 'Archiv']].map(([k, t]) => (
-          <button key={k} onClick={() => setFilter(k)} aria-pressed={filter === k} className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === k ? 'bg-forest text-cream' : 'border border-forest/20 bg-white'}`}>{t}</button>
+          <button key={k} onClick={() => setFilter(k)} aria-pressed={filter === k} className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === k ? 'bg-forest text-white' : 'border border-ig-hairline bg-white'}`}>{t}</button>
         ))}
       </div>
       {!creatives ? <Laden /> : sichtbar.length === 0 ? (
-        <p className="text-sm text-forest/60">Hier ist noch nichts.</p>
+        <p className="text-sm text-slate-500">Hier ist noch nichts.</p>
       ) : (
         <div className="space-y-4">{sichtbar.map((c) => <CreativeKarte key={c.id} creative={c} onGeaendert={laden} />)}</div>
       )}
@@ -88,9 +88,9 @@ function Erzeugen({ regionId, onFertig }) {
         <legend className="label">Motive</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {MOTIV_SCHLUESSEL.map((m) => (
-            <label key={m} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${motive.includes(m) ? 'border-forest bg-hell' : 'border-forest/15 bg-white'}`}>
+            <label key={m} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${motive.includes(m) ? 'border-forest bg-hell' : 'border-ig-hairline bg-white'}`}>
               <input type="checkbox" className="mt-0.5 h-5 w-5 accent-forest" checked={motive.includes(m)} onChange={() => umschalten(m)} />
-              <span><strong>{MOTIVE[m].titel}</strong><br /><span className="text-forest/70">{MOTIVE[m].idee}</span></span>
+              <span><strong>{MOTIVE[m].titel}</strong><br /><span className="text-slate-500">{MOTIVE[m].idee}</span></span>
             </label>
           ))}
         </div>
@@ -159,8 +159,8 @@ function CreativeKarte({ creative, onGeaendert }) {
     <article className="karte">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <MotivChip motiv={c.motiv} />
-        <Chip farbe={creative.status === 'freigegeben' ? 'bg-fresh text-forest' : creative.status === 'abgelehnt' ? 'bg-igred/15 text-igred' : 'bg-cream text-forest border border-forest/20'}>{STATUS_TEXT[creative.status]}</Chip>
-        {beiMeta && <Chip farbe="bg-forest text-cream">Bei Meta</Chip>}
+        <Chip farbe={creative.status === 'freigegeben' ? 'bg-fresh text-forest' : creative.status === 'abgelehnt' ? 'bg-igred/15 text-igred' : 'bg-ig-50 text-forest border border-ig-hairline'}>{STATUS_TEXT[creative.status]}</Chip>
+        {beiMeta && <Chip farbe="bg-forest text-white">Bei Meta</Chip>}
       </div>
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-3">
@@ -178,7 +178,7 @@ function CreativeKarte({ creative, onGeaendert }) {
           <Feld label="Bildidee" wert={c.bild_idee} onChange={(v) => setze('bild_idee', v)} zeilen={2} aus={!bearbeitbar} />
           <MarkenCheck creative={c} />
           {c.markencheck?.quellen?.length > 0 && (
-            <p className="text-xs text-forest/60">Quellen: {c.markencheck.quellen.map((q) => q.split('/').pop()).join(', ')}</p>
+            <p className="text-xs text-slate-500">Quellen: {c.markencheck.quellen.map((q) => q.split('/').pop()).join(', ')}</p>
           )}
           <MedienLeiste medien={creative.medien} />
 
@@ -197,7 +197,7 @@ function CreativeKarte({ creative, onGeaendert }) {
               <button className="knopf-rand" onClick={archivieren}>Archivieren</button>
             </div>
           )}
-          {beiMeta && <p className="text-xs text-forest/60">Diese Anzeige liegt bei Meta und bleibt unverändert. Für Änderungen „Neu erzeugen“ in einer neuen Variante nutzen.</p>}
+          {beiMeta && <p className="text-xs text-slate-500">Diese Anzeige liegt bei Meta und bleibt unverändert. Für Änderungen „Neu erzeugen“ in einer neuen Variante nutzen.</p>}
           {arbeit && <Laden text={arbeit} />}
           <Meldung art={meldung?.art}>{meldung?.text}</Meldung>
         </div>
@@ -214,7 +214,7 @@ function Feld({ label, wert, onChange, max, zeilen, aus }) {
     <div>
       <div className="flex justify-between">
         <label className="label" htmlFor={id}>{label}</label>
-        {max && <span className={`text-xs ${laenge > max ? 'text-igred' : 'text-forest/50'}`}>{laenge}/{max}</span>}
+        {max && <span className={`text-xs ${laenge > max ? 'text-igred' : 'text-slate-500'}`}>{laenge}/{max}</span>}
       </div>
       {zeilen ? (
         <textarea id={id} className="feld" rows={zeilen} value={wert || ''} disabled={aus} onChange={(e) => onChange(e.target.value)} />

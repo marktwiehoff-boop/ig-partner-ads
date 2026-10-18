@@ -14,9 +14,9 @@ export function zeitraum(art, heute = new Date()) {
 }
 
 export const KAMPAGNEN_STATUS = {
-  entwurf: { text: 'Noch nicht bei Meta', farbe: 'bg-hell text-forest' },
-  wird_angelegt: { text: 'Wird angelegt', farbe: 'bg-hell text-forest' },
-  pausiert: { text: 'Pausiert', farbe: 'bg-cream text-forest border border-forest/30' },
+  entwurf: { text: 'Noch nicht bei Meta', farbe: 'bg-ig-100 text-ig-800' },
+  wird_angelegt: { text: 'Wird angelegt', farbe: 'bg-ig-100 text-ig-800' },
+  pausiert: { text: 'Pausiert', farbe: 'bg-ig-50 text-forest border border-ig-hairline' },
   live: { text: 'Live', farbe: 'bg-fresh text-forest' },
   fehler: { text: 'Fehler', farbe: 'bg-igred text-white' },
 }
