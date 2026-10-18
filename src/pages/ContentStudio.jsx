@@ -70,7 +70,7 @@ function Erzeugen({ regionId, onFertig }) {
     setFortschritt('Claude liest das immergrün-Wissen und schreibt …')
     try {
       const r = await jobAusfuehren('texte', { region_id: regionId, motive, anzahl_je_motiv: anzahl, hinweis }, setFortschritt)
-      setMeldung({ art: 'ok', text: `${r.creative_ids.length} Entwürfe erstellt. Quelle: ${r.wissen_dateien.length} Dokumente aus IG-Wissen.` })
+      setMeldung({ art: 'ok', text: `${r.creative_ids.length === 1 ? '1 Entwurf' : `${r.creative_ids.length} Entwürfe`} erstellt. Quelle: ${r.wissen_dateien.length} Dokumente aus IG-Wissen.` })
       onFertig()
     } catch (err) {
       setMeldung({ art: 'fehler', text: err.message })
