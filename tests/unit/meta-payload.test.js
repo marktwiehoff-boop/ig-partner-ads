@@ -57,6 +57,7 @@ describe('Meta-Payloads', () => {
 
   it('wählt 4:5 vor 1:1', () => {
     expect(waehleBild([{ typ: 'bild', format: '1:1', url: 'a' }, { typ: 'bild', format: '4:5', url: 'b' }]).url).toBe('b')
+    expect(waehleBild([{ typ: 'bild', format: '1:1', url: 'a' }, { typ: 'bild', format: '3:4', url: 'c' }]).url).toBe('c')
     expect(waehleBild([{ typ: 'video', format: '9:16', url: 'v' }])).toBeNull()
   })
 

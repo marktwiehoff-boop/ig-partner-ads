@@ -108,10 +108,14 @@ export function anzeigePayload(name, adsetId, creativeId) {
   return { name, adset_id: adsetId, creative: { creative_id: creativeId }, status: PAUSIERT }
 }
 
-/** Welches Bild nehmen wir für die Bildanzeige? 4:5 ist für den Feed am besten. */
+/** Welches Bild nehmen wir für die Bildanzeige? 4:5 ist für den Feed am besten, 3:4 kommt ihm am nächsten. */
 export function waehleBild(medien) {
   const bilder = (medien || []).filter((m) => m.typ === 'bild' && m.url)
-  return bilder.find((m) => m.format === '4:5') || bilder.find((m) => m.format === '1:1') || bilder[0] || null
+  for (const f of ['4:5', '3:4', '1:1']) {
+    const b = bilder.find((m) => m.format === f)
+    if (b) return b
+  }
+  return bilder[0] || null
 }
 
 export function waehleVideo(medien) {

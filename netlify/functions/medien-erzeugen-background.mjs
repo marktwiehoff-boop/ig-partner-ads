@@ -39,7 +39,7 @@ export async function medienErzeugen(job, _user, melden = async () => {}, deps =
     await melden(`Bild ${format} wird erzeugt`)
     const b = await bild(c.bild_idee, format)
     const url = await ablegen(sb, b.url, `${c.id}/${zeit}-${format.replace(':', 'x')}.${endung(b.url, 'jpg')}`, deps.fetchFn)
-    medien.push({ format, typ: 'bild', url, quelle: 'higgsfield', request_id: b.requestId })
+    medien.push({ format: b.format || format, typ: 'bild', url, quelle: 'higgsfield', request_id: b.requestId })
   }
   if (e.mit_clip) {
     const start = medien.find((m) => m.format === '9:16') || medien[0]

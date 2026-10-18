@@ -27,7 +27,7 @@ async function anfrage(pfad, { methode = 'GET', body, fetchFn = fetch } = {}) {
   } catch {
     daten = { roh: text }
   }
-  if (!r.ok) throw new Error(`Higgsfield ${r.status}: ${daten.detail || daten.message || text.slice(0, 200)}`)
+  if (!r.ok) throw new Error(`Higgsfield ${r.status}: ${fehlertext(daten, text)}`)
   return daten
 }
 
@@ -46,18 +46,34 @@ export function bildPrompt(bildIdee) {
   return `${bildIdee.trim()}. ${BILDSTIL}`
 }
 
+/** Higgsfield meldet Fehler oft als Liste { loc, msg }. Lesbar machen. */
+export function fehlertext(daten, roh = '') {
+  const d = daten?.detail ?? daten?.message ?? daten?.error
+  if (Array.isArray(d)) return d.map((x) => [x.loc?.slice(1).join('.'), x.msg].filter(Boolean).join(': ')).join(' | ')
+  if (d && typeof d === 'object') return JSON.stringify(d).slice(0, 300)
+  return String(d || roh).slice(0, 300)
+}
+
+// Soul kennt kein 4:5. 3:4 ist das nächste Hochformat, Meta schneidet im Feed
+// minimal auf 4:5 zu. Andere Modelle bekommen das Format unverändert.
+const SOUL_FORMATE = { '4:5': '3:4' }
+
+export function modellFormat(modell, format) {
+  return modell.includes('/soul') ? (SOUL_FORMATE[format] || format) : format
+}
+
 export async function erzeugeBild(bildIdee, format, opts = {}) {
   const modell = process.env.HF_BILD_MODELL || 'higgsfield-ai/soul/standard'
   const start = await anfrage(modell, {
     methode: 'POST',
-    body: { prompt: bildPrompt(bildIdee), aspect_ratio: format, resolution: '2K' },
+    body: { prompt: bildPrompt(bildIdee), aspect_ratio: modellFormat(modell, format) },
     fetchFn: opts.fetchFn,
   })
   if (!start.request_id) throw new Error('Higgsfield hat keine request_id geliefert.')
   const fertig = start.status === 'completed' ? start : await warteAufErgebnis(start.request_id, opts)
   const url = fertig.images?.[0]?.url
   if (!url) throw new Error('Higgsfield hat kein Bild geliefert.')
-  return { url, requestId: start.request_id }
+  return { url, requestId: start.request_id, format: modellFormat(modell, format) }
 }
 
 export async function erzeugeClip(bildIdee, startbildUrl, opts = {}) {

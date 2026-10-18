@@ -9,7 +9,7 @@ vi.mock('../../netlify/functions/lib/supabase.mjs', async (orig) => ({
 
 const { erzeugeTexte, MODELL } = await import('../../netlify/functions/lib/claude.mjs')
 const { ladeMarkenwissen, leereWissenCache } = await import('../../netlify/functions/lib/igwissen.mjs')
-const { erzeugeBild, bildPrompt } = await import('../../netlify/functions/lib/higgsfield.mjs')
+const { erzeugeBild, bildPrompt, modellFormat } = await import('../../netlify/functions/lib/higgsfield.mjs')
 const { nutzerPruefen } = await import('../../netlify/functions/lib/auth.mjs')
 const { texteErzeugen } = await import('../../netlify/functions/texte-erzeugen-background.mjs')
 const { medienErzeugen } = await import('../../netlify/functions/medien-erzeugen-background.mjs')
@@ -120,9 +120,21 @@ describe('Higgsfield', () => {
     const [url, opt] = fetchFn.mock.calls[0]
     expect(url).toBe('https://api.higgsfield.ai/higgsfield-ai/soul/standard')
     expect(opt.headers.authorization).toBe('Key id:geheim')
-    expect(JSON.parse(opt.body)).toMatchObject({ aspect_ratio: '4:5' })
+    expect(JSON.parse(opt.body)).toMatchObject({ aspect_ratio: '3:4' })
+    expect(JSON.parse(opt.body).resolution).toBeUndefined()
+    expect(r.format).toBe('3:4')
     expect(JSON.parse(opt.body).prompt).toMatch(/Kein Gelb/)
     expect(fetchFn.mock.calls[1][0]).toBe('https://api.higgsfield.ai/requests/req1/status')
+  })
+
+  it('Feldfehler werden lesbar angezeigt', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce(Response.json({ detail: [{ loc: ['body', 'aspect_ratio'], msg: 'Input should be 1:1 or 9:16' }] }, { status: 422 }))
+    await expect(erzeugeBild('x', '1:1', { fetchFn })).rejects.toThrow('Higgsfield 422: aspect_ratio: Input should be 1:1 or 9:16')
+  })
+
+  it('andere Modelle bekommen 4:5 unverändert', () => {
+    expect(modellFormat('bytedance/seedream/v4/text-to-image', '4:5')).toBe('4:5')
+    expect(modellFormat('higgsfield-ai/soul/standard', '9:16')).toBe('9:16')
   })
 
   it('Moderation wird verständlich gemeldet', async () => {
