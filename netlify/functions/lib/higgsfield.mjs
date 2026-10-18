@@ -3,7 +3,8 @@
 
 import { BILDSTIL } from '../../../shared/markenregeln.js'
 
-const BASIS = 'https://api.higgsfield.ai'
+// Higgsfield nennt api.higgsfield.ai (SDK) und platform.higgsfield.ai (ältere Doku).
+const basis = () => (process.env.HF_BASIS_URL || 'https://api.higgsfield.ai').replace(/\/$/, '')
 export const FORMATE = ['1:1', '4:5', '9:16']
 
 function zugang() {
@@ -13,7 +14,7 @@ function zugang() {
 }
 
 async function anfrage(pfad, { methode = 'GET', body, fetchFn = fetch } = {}) {
-  const url = pfad.startsWith('http') ? pfad : `${BASIS}${pfad.startsWith('/') ? pfad : `/${pfad}`}`
+  const url = pfad.startsWith('http') ? pfad : `${basis()}${pfad.startsWith('/') ? pfad : `/${pfad}`}`
   const r = await fetchFn(url, {
     method: methode,
     headers: { authorization: `Key ${zugang()}`, 'content-type': 'application/json', accept: 'application/json' },
