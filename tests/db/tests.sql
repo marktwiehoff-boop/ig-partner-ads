@@ -179,3 +179,47 @@ select t_gleich((select count(*) from ads_referenzbilder)::int, 1, 'Viewer sieht
 select t_fehler($$insert into storage.objects (bucket_id, name) values ('ads-medien', 'referenzen/v.jpg')$$, 'row-level security');
 select t_fehler($$insert into ads_referenzbilder (pfad, url) values ('referenzen/v.jpg', 'x')$$, 'row-level security');
 reset role;
+
+-- 14. Autopilot: Start ist die menschliche Freigabe, Auto-Freigabe nur Server
+set role authenticated;
+select t_als('00000000-0000-0000-0000-00000000000b');
+update ads_regions set autopilot = true where slug = 'ostbayern';
+select t_gleich((select autopilot from ads_regions where slug = 'ostbayern'), false, 'Viewer kann keine Partnersuche starten');
+select t_als('00000000-0000-0000-0000-00000000000e');
+update ads_regions set autopilot = true where slug = 'ostbayern';
+select t_gleich((select autopilot_von from ads_regions where slug = 'ostbayern'), '00000000-0000-0000-0000-00000000000e'::uuid, 'Start wird Rick zugerechnet');
+select t_gleich((select count(*) from ads_approvals where art = 'kampagne_live' and (details->>'autopilot')::boolean)::int, 1, 'Start ist protokolliert');
+update ads_regions set monatsbudget_eur = 0 where slug = 'stuttgart';
+select t_fehler($$update ads_regions set autopilot = true where slug = 'stuttgart'$$, 'Monatsbudget über 0');
+update ads_regions set aktiv = false where slug = 'ostbayern';
+select t_gleich((select autopilot from ads_regions where slug = 'ostbayern'), false, 'Inaktive Region stoppt den Autopilot');
+select t_gleich((select count(*) from ads_approvals where art = 'kampagne_pause' and details ? 'autopilot')::int, 1, 'Stopp ist protokolliert');
+update ads_regions set aktiv = true, autopilot = true where slug = 'ostbayern';
+select t_fehler($$select ads_creative_auto_freigeben((select id from ads_creatives limit 1), '{"bestanden": true}')$$, 'permission denied');
+reset role;
+select t_als(null);
+set role service_role;
+select t_fehler($$update ads_regions set autopilot = true where slug = 'stuttgart'$$, 'nur ein Mensch');
+insert into ads_creatives (region_id, motiv, hook, haupttext, ueberschrift, bild_idee, medien, erstellt_von)
+select id, 'lifestyle', 'Dein Laden in Regensburg?', 'Wir begleiten dich.', 'Jetzt prüfen', 'Theke',
+       '[{"format":"3:4","typ":"bild","url":"https://x/2.jpg"}]', '00000000-0000-0000-0000-00000000000e'
+  from ads_regions where slug = 'ostbayern';
+select t_fehler($$select ads_creative_auto_freigeben((select id from ads_creatives where motiv = 'lifestyle'), '{"bestanden": false}')$$, 'nicht bestanden');
+select ads_creative_auto_freigeben((select id from ads_creatives where motiv = 'lifestyle'), '{"bestanden": true, "befunde": []}');
+select t_gleich((select status::text from ads_creatives where motiv = 'lifestyle'), 'freigegeben', 'Server gibt automatisch frei');
+select t_gleich((select freigegeben_von from ads_creatives where motiv = 'lifestyle'), '00000000-0000-0000-0000-00000000000e'::uuid, 'Freigabe wird Rick zugerechnet');
+select t_gleich((select (details->>'automatisch')::boolean from ads_approvals where art = 'creative' order by created_at desc limit 1), true, 'Auto-Freigabe protokolliert');
+update ads_regions set freigabe_modus = 'manuell' where slug = 'ostbayern';
+insert into ads_creatives (region_id, motiv, hook, haupttext, ueberschrift, medien, erstellt_von)
+select id, 'echter_partner', 'Dein Weg?', 'Wir zeigen dir alles.', 'Erfolgscheck', '[{"typ":"bild","format":"1:1","url":"u"}]', '00000000-0000-0000-0000-00000000000e'
+  from ads_regions where slug = 'ostbayern';
+select t_fehler($$select ads_creative_auto_freigeben((select id from ads_creatives where motiv = 'echter_partner'), '{"bestanden": true}')$$, 'nicht auf automatischer Freigabe');
+select t_gleich(ads_autopilot_sperre_holen(), true, 'Sperre holen');
+select t_gleich(ads_autopilot_sperre_holen(), false, 'Zweiter Lauf wartet');
+select ads_autopilot_sperre_freigeben('{"ok": true}');
+select t_gleich(ads_autopilot_sperre_holen(), true, 'Nach Freigabe wieder frei');
+reset role;
+set role authenticated;
+select t_als('00000000-0000-0000-0000-00000000000e');
+select t_fehler($$select ads_autopilot_sperre_holen()$$, 'permission denied');
+reset role;

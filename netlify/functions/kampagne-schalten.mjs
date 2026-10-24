@@ -22,6 +22,7 @@ export async function schalten({ user, body }, deps = {}) {
 
   if (aktion === 'pause') {
     await setzeStatus(cfg, k.meta_campaign_id, 'PAUSED', { fetchFn: deps.fetchFn })
+    pruefe(await sb.from('ads_creatives').update({ meta_aktiv: false }).eq('region_id', regionId), 'Anzeigen-Status speichern')
     pruefe(await sb.from('ads_approvals').insert({
       art: 'kampagne_pause', objekt_id: k.id, entscheidung: 'freigegeben', kommentar, user_id: user.id,
     }), 'Protokoll')
@@ -61,6 +62,8 @@ export async function schalten({ user, body }, deps = {}) {
   for (const a of freigegeben) for (const id of metaAnzeigenIds(a)) await setzeStatus(cfg, id, 'ACTIVE', { fetchFn: deps.fetchFn })
   await setzeStatus(cfg, k.meta_adset_id, 'ACTIVE', { fetchFn: deps.fetchFn })
   await setzeStatus(cfg, k.meta_campaign_id, 'ACTIVE', { fetchFn: deps.fetchFn })
+  for (const a of gesperrt) pruefe(await sb.from('ads_creatives').update({ meta_aktiv: false }).eq('id', a.id), 'Anzeigen-Status speichern')
+  for (const a of freigegeben) pruefe(await sb.from('ads_creatives').update({ meta_aktiv: true }).eq('id', a.id), 'Anzeigen-Status speichern')
 
   pruefe(await sb.from('ads_campaigns').update({
     status: 'live', live_seit: k.live_seit || new Date().toISOString(), letzter_fehler: null, updated_at: new Date().toISOString(),

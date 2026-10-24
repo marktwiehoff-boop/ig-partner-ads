@@ -12,9 +12,16 @@ export function fakeSupabase(start = {}) {
     let aktion = { art: 'select' }
     let einzel = null
     let rueckgabe = false
+    let grenze = null
     const q = {
       select() { if (aktion.art !== 'select') rueckgabe = true; return q },
       eq(f, w) { filter.push((z) => z[f] === w); return q },
+      neq(f, w) { filter.push((z) => z[f] !== w); return q },
+      in(f, liste) { filter.push((z) => liste.includes(z[f])); return q },
+      lte(f, w) { filter.push((z) => z[f] <= w); return q },
+      order() { return q },
+      limit(n) { grenze = n; return q },
+      delete() { aktion = { art: 'delete' }; return q },
       is(f, w) { filter.push((z) => (z[f] ?? null) === w); return q },
       gte(f, w) { filter.push((z) => z[f] >= w); return q },
       or(ausdruck) {
@@ -33,6 +40,11 @@ export function fakeSupabase(start = {}) {
       const t = tab(tabelle)
       let ergebnis
       if (aktion.art === 'select') ergebnis = t.filter((z) => filter.every((f) => f(z)))
+      if (aktion.art === 'delete') {
+        ergebnis = t.filter((z) => filter.every((f) => f(z)))
+        for (const z of ergebnis) t.splice(t.indexOf(z), 1)
+      }
+      if (grenze != null && Array.isArray(ergebnis)) ergebnis = ergebnis.slice(0, grenze)
       if (aktion.art === 'insert') {
         ergebnis = aktion.werte.map((w) => ({ id: randomUUID(), ...w }))
         t.push(...ergebnis)
@@ -67,10 +79,21 @@ export function fakeSupabase(start = {}) {
     }),
   }
 
+  // RPC-Nachbau: sb.rpcs.name = async (args) => ergebnis
+  const rpcs = {}
   return {
     db,
     storage,
+    rpcs,
     from: abfrage,
+    rpc: async (name, args) => {
+      if (!rpcs[name]) return { data: null, error: { message: `rpc ${name} fehlt im Fake` } }
+      try {
+        return { data: await rpcs[name](args), error: null }
+      } catch (e) {
+        return { data: null, error: { message: e.message } }
+      }
+    },
     auth: {
       _users: auth.users,
       getUser: async (token) => (auth.users[token] ? { data: { user: auth.users[token] }, error: null } : { data: null, error: { message: 'ungültig' } }),
