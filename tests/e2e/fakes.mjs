@@ -129,8 +129,8 @@ export async function starteFakes({ port, pgrstUrl, wissenOrdner }) {
             ? { bestanden: false, zusammenfassung: 'Erfundene Zahl.', befunde: [{ punkt: 'fakten', schwere: 'blockiert', begruendung: 'Die Zahl 200 Stores steht nicht im Wissen.' }] }
             : { bestanden: true, zusammenfassung: 'Passt zum IG-Wissen.', befunde: [{ punkt: 'sonstiges', schwere: 'hinweis', begruendung: 'Ortsbezug ist natürlich.' }] }
         } else {
-          const motive = (auftrag.match(/für diese Motive: ([^.\n]+)\./) || [, ''])[1].split(',').map((s) => s.trim()).filter(Boolean)
-          const hinweis = (auftrag.match(/Wunsch von Rick aus der Expansion: (.*)/) || [, ''])[1]
+          const motive = (auftrag.match(/für diese Motive: ([^.\n]+)\./) || ['', ''])[1].split(',').map((s) => s.trim()).filter(Boolean)
+          const hinweis = (auftrag.match(/Wunsch von Rick aus der Expansion: (.*)/) || ['', ''])[1]
           log.texte.push({ motive, hinweis, wissenZeichen: system.length })
           daten = { varianten: motive.map((m) => variante(m, hinweis)) }
         }
