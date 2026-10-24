@@ -162,5 +162,13 @@ export function AutopilotStatus() {
   }, [])
   if (!lauf?.letzter_lauf) return null
   const vor = Math.round((Date.now() - new Date(lauf.letzter_lauf).getTime()) / 60000)
-  return <span className="text-xs text-slate-500">Autopilot zuletzt vor {vor} Min.{lauf.laeuft_seit ? ', läuft gerade' : ''}</span>
+  const regionen = Object.values(lauf.letzter_bericht?.regionen || {})
+  const hinweise = regionen.flatMap((r) => (r.hinweise || []).map((h) => `${r.name}: ${h}`)).slice(0, 3)
+  return (
+    <span className="text-xs text-slate-500">
+      Autopilot zuletzt vor {vor} Min.{lauf.laeuft_seit ? ', läuft gerade' : ''}
+      {lauf.letzter_bericht?.fehler && <span className="block font-bold text-igred">Letzter Lauf mit Fehler: {lauf.letzter_bericht.fehler}</span>}
+      {hinweise.map((h) => <span key={h} className="block text-ig-700">{h}</span>)}
+    </span>
+  )
 }

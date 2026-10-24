@@ -19,7 +19,7 @@ Interne App der immergrün Franchise GmbH. Rick (Expansion) erstellt, budgetiert
 | Budget | Tagesbudget bei Meta = Monatsbudget / 31, wird bei Änderung angeglichen, nie darüber | App (Wert kommt vom Menschen) |
 | Live | Kampagne geht live, neue Anzeigen werden aktiviert | App (Freigabe = Start der Partnersuche) |
 | Schutz | Nähert sich die Region ihrer Obergrenze, pausiert die App. Im neuen Monat geht es automatisch weiter | App |
-| Lernen | Montags: Motive, die je gutem Lead mehr als doppelt so teuer sind wie das beste Motiv (ab 10 Leads, 14 Tage live), werden pausiert und durch eine neue Variante ersetzt | App |
+| Lernen | Montags: Motive, die je gutem Lead mehr als doppelt so teuer sind wie das beste Motiv (ab 10 Leads in der Region, 14 Tage live, mindestens 50 € Ausgaben je Motiv), werden pausiert und durch eine neue Variante ersetzt | App |
 
 3. Jeder Schritt steht im Dashboard unter „Was die App zuletzt selbst getan hat“. **Partnersuche stoppen** pausiert die Kampagne sofort.
 
@@ -56,8 +56,12 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 2. Links auf **SQL Editor** klicken, dann **New query**.
 3. Öffne im GitHub-Repo die Datei `supabase/einrichtung-komplett.sql`, klicke auf **Raw**, markiere alles (Strg+A), kopiere es (Strg+C), füge es im SQL Editor ein (Strg+V) und klicke **Run**. Es muss „Success. No rows returned“ erscheinen. Die Datei läuft ganz oder gar nicht.
 4. Prüfen: Links auf **Table Editor**. Dort stehen jetzt Tabellen, die mit `ads_` beginnen. In `ads_regions` stehen Berlin, Ostbayern und Region Stuttgart.
-   **Nachträge für eine schon eingerichtete Datenbank:** Neue Dateien in `supabase/migrations/` (ab `0006_bildvorlagen.sql`) einzeln im SQL Editor ausführen.
-5. Links auf **Authentication**, dann **URL Configuration**. Trage die Netlify-Adresse der App (aus Schritt 2) unter **Redirect URLs** ein. Bei selbst gehostetem Supabase steht das in der Server-Datei `.env` als `ADDITIONAL_REDIRECT_URLS`.
+5. **SQL-Nachträge laufen ab jetzt von allein.** Bei jedem Netlify-Deploy spielt `tools/migrieren.mjs` neue Dateien aus `supabase/migrations/` selbst ein (Tabelle `ads_migrationen` merkt sich den Stand, schon von Hand Eingespieltes wird erkannt). Dafür einmalig in Netlify die Variable `SUPABASE_DB_URL` anlegen:
+   - Supabase: oben **Connect** klicken, Reiter **Session pooler** (nicht „Direct connection“, die ist nur IPv6), die Adresse `postgresql://postgres.…:[YOUR-PASSWORD]@aws-0-….pooler.supabase.com:5432/postgres` kopieren und `[YOUR-PASSWORD]` durch das Datenbank-Passwort ersetzen (Project Settings, Database, Reset password, falls unbekannt).
+   - Netlify: **Environment variables**, **Add a variable**, Key `SUPABASE_DB_URL`, Wert die Adresse, **Scopes: Builds** (mehr braucht sie nicht), Context Production. Danach **Deploys**, **Trigger deploy**.
+   - Im Deploy-Log steht dann „SQL-Nachträge eingespielt: …“ oder „Datenbank ist auf dem Stand“. Ein Fehler in einer SQL-Datei bricht den Deploy ab, die Datenbank bleibt unverändert.
+   - Ohne die Variable bleibt es beim alten Weg: neue Dateien in `supabase/migrations/` einzeln im SQL Editor ausführen.
+6. Links auf **Authentication**, dann **URL Configuration**. Trage die Netlify-Adresse der App (aus Schritt 2) unter **Redirect URLs** ein. Bei selbst gehostetem Supabase steht das in der Server-Datei `.env` als `ADDITIONAL_REDIRECT_URLS`.
 
 ### 2. Netlify
 
@@ -70,6 +74,7 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 | `VITE_SUPABASE_URL`, `SUPABASE_URL` | Supabase: Adresse der Instanz |
 | `VITE_SUPABASE_ANON_KEY` | Supabase: anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase: service_role key (geheim) |
+| `SUPABASE_DB_URL` | Session-Pooler-Adresse der Datenbank (Schritt 1.5), nur Scope **Builds**. Damit spielt der Deploy SQL-Nachträge selbst ein |
 | `ANTHROPIC_API_KEY` | console.anthropic.com, API Keys |
 | `HF_CREDENTIALS` | Higgsfield: `KEY_ID:KEY_SECRET` |
 | `IGWISSEN_TOKEN` | GitHub-Token, nur Lesen auf `igwissen` |
@@ -139,10 +144,13 @@ Die Landingpage muss die UTM-Parameter aus dem Anzeigen-Link bis zum Abschluss m
 ```
 npm install
 npm run dev        # http://localhost:5650 (braucht .env nach .env.example)
-npm test           # 101 Tests: Markenregeln, Budget, Meta, Claude, Higgsfield, Rechte
-npm run test:db    # Migrationen und Datenbankregeln auf lokalem Postgres 16
+npm test           # 103 Tests: Markenregeln, Budget, Meta, Claude, Higgsfield, Rechte, Autopilot-Planer
+npm run test:db    # Migrationen, Datenbankregeln und das Einspiel-Werkzeug auf lokalem Postgres 16
+npm run test:e2e   # Ende-zu-Ende: echtes Postgres + PostgREST, ein Klick, dann läuft alles bis "live"
 npm run build
 ```
+
+**Ende-zu-Ende-Lauf (`npm run test:e2e`):** startet ein lokales Postgres 16 und PostgREST (wird einmal heruntergeladen), spielt die Migrationen mit `tools/migrieren.mjs` ein und lässt den unveränderten App-Code laufen. Nur Claude, Higgsfield, Meta und GitHub sind Attrappen, die alles mitschreiben. Der Lauf zeigt mit 63 Prüfungen: Rick klickt einmal, danach entstehen Texte, Prüfung (eine erfundene Zahl wird abgelehnt und neu geschrieben), Bilder mit Store-Vorlage, Freigaben, die pausierte Meta-Kampagne mit 16,12 € Tagesbudget, die Live-Schaltung in der richtigen Reihenfolge, Budgetänderung, Lead-Rückmeldung, das wöchentliche Lernen, der Betrieb ohne Meta-Schlüssel und der Stopp. Nie klickt jemand außer Rick, und jede Freigabe ist ihm zugerechnet.
 
 ## Aufbau
 
@@ -154,7 +162,8 @@ npm run build
 | `netlify/functions/lib/autopilot.mjs` | Planer (reine Funktion, getestet) und Ausführung der Schritte, Lauf-Sperre, Wochen-Lernen |
 | `netlify/functions/lib/pruefer.mjs` | Qualitätsprüfung jeder Anzeige gegen das IG-Wissen vor der automatischen Freigabe |
 | `src/pages/` | Dashboard, Regionen, Content-Studio, Freigaben, Nutzer, Login |
-| `tests/` | Vitest (`unit`, `functions`) und Datenbank-Tests (`db`) |
+| `tools/migrieren.mjs` | Spielt SQL-Nachträge beim Netlify-Build ein (nur Production, nur mit `SUPABASE_DB_URL`) |
+| `tests/` | Vitest (`unit`, `functions`), Datenbank-Tests (`db`) und Ende-zu-Ende-Lauf (`e2e`) |
 
 ## Offen für später
 

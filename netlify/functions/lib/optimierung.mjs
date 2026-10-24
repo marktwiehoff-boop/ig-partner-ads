@@ -7,6 +7,8 @@
 export const MIN_LEADS_REGION = 10
 export const MIN_TAGE_LIVE = 14
 export const FAKTOR = 2
+// Unter dieser Summe wird ein Motiv nicht beurteilt: Mit 10 € lässt sich nichts sagen.
+export const MIN_AUSGABEN_MOTIV_EUR = 50
 
 /**
  * zeilen: Zeilen aus ads_dashboard für eine Region und einen Zeitraum
@@ -14,7 +16,7 @@ export const FAKTOR = 2
  * liveSeit: { motiv: ISO-Datum der Freigabe }
  * Rückgabe: [{ motiv, grund }]
  */
-export function schwacheMotive({ zeilen, liveSeit = {}, heute = new Date(), minLeads = MIN_LEADS_REGION, faktor = FAKTOR }) {
+export function schwacheMotive({ zeilen, liveSeit = {}, heute = new Date(), minLeads = MIN_LEADS_REGION, faktor = FAKTOR, minAusgaben = MIN_AUSGABEN_MOTIV_EUR }) {
   const mitMotiv = zeilen.filter((z) => z.motiv)
   const leadsGesamt = mitMotiv.reduce((a, z) => a + Number(z.leads || 0), 0)
   if (leadsGesamt < minLeads) return []
@@ -31,6 +33,7 @@ export function schwacheMotive({ zeilen, liveSeit = {}, heute = new Date(), minL
     if (!seit || seit > schwelle) continue
     const ausgaben = Number(z.ausgaben_eur || 0)
     const gute = Number(z.gute_leads || 0)
+    if (ausgaben < minAusgaben) continue
     if (gute > 0 && ausgaben / gute > grenze) {
       schwach.push({ motiv: z.motiv, grund: `${euro(ausgaben / gute)} je gutem Lead, bestes Motiv ${euro(beste)}` })
     } else if (gute === 0 && ausgaben > grenze) {

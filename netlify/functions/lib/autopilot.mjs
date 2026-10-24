@@ -30,6 +30,7 @@ import { tagesbudgetCent, schutzpauseGrund, gesamtSchutzGrund } from '../../../s
 export const MAX_ABLEHNUNGEN_JE_MOTIV = 2 // in 7 Tagen, danach wartet das Motiv auf einen Menschen
 export const ZEITBUDGET_MS = 10 * 60 * 1000 // Netlify-Hintergrund darf 15 Minuten
 const BILDER_JE_RUNDE = 2
+export const HINWEIS_META_FEHLT = 'Meta-Schlüssel fehlen in Netlify (META_ACCESS_TOKEN, META_AD_ACCOUNT_ID, META_PAGE_ID, META_PIXEL_ID). Texte, Prüfung, Bilder und Freigabe laufen weiter, die Kampagne wartet.'
 
 const hatBild = (c) => (c.medien || []).some((m) => m.typ === 'bild' && m.url)
 const offen = (c) => !['archiviert', 'abgelehnt'].includes(c.status)
@@ -44,7 +45,7 @@ export function abgelehnteVersuche(creatives, motiv, heute = new Date()) {
  * Reiner Planer. Rückgabe { schritte: [{ art, ... }], hinweise: [] }.
  * Reihenfolge der Schritte = Reihenfolge der Ausführung.
  */
-export function planeRegion({ region, kampagne, creatives, ausgabenRegion = 0, ausgabenGesamt = 0, einst, heute = new Date() }) {
+export function planeRegion({ region, kampagne, creatives, ausgabenRegion = 0, ausgabenGesamt = 0, einst, heute = new Date(), metaBereit = true }) {
   const schritte = []
   const hinweise = []
   if (!region?.autopilot || !region.aktiv) return { schritte, hinweise }
@@ -90,8 +91,13 @@ export function planeRegion({ region, kampagne, creatives, ausgabenRegion = 0, a
     else hinweise.push(`${MOTIVE[c.motiv]?.titel || c.motiv}: wartet auf Freigabe durch einen Menschen (Modus manuell).`)
   }
 
-  // 5. Freigegebene Anzeigen zu Meta
+  // 5. Freigegebene Anzeigen zu Meta. Ohne Meta-Schlüssel wird alles bis zur
+  // Freigabe vorbereitet, die Kampagne wartet, bis die Schlüssel da sind.
   const freigegeben = aktive.filter((x) => x.status === 'freigegeben' && hatBild(x))
+  if (!metaBereit) {
+    hinweise.push(HINWEIS_META_FEHLT)
+    return { schritte, hinweise }
+  }
   if (freigegeben.some((x) => !x.meta_ad_id)) schritte.push({ art: 'meta_anlegen' })
 
   // 6. Tagesbudget an Meta angleichen (immer Monatsbudget / 31, nie darüber)
@@ -127,6 +133,25 @@ export async function protokoll(sb, regionId, details) {
   await sb.from('ads_protokoll').insert({ ereignis: 'autopilot', region_id: regionId, details })
 }
 
+/** Derselbe Hinweis steht höchstens einmal am Tag im Protokoll, nicht alle 15 Minuten. */
+export async function hinweisProtokoll(sb, regionId, text) {
+  const seit = new Date(Date.now() - 24 * 3600000).toISOString()
+  const { data } = await sb.from('ads_protokoll').select('id').eq('region_id', regionId).eq('ereignis', 'autopilot')
+    .eq('details->>schritt', 'hinweis').eq('details->>text', text).gte('created_at', seit).limit(1)
+  if (data?.length) return false
+  await protokoll(sb, regionId, { schritt: 'hinweis', text })
+  return true
+}
+
+function metaBereit() {
+  try {
+    metaKonfig()
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Standard-Bausteine, in Tests austauschbar. */
 export function standardBausteine() {
   return {
@@ -138,8 +163,15 @@ export function standardBausteine() {
     metaAnlegen: (job, user) => kampagneAnlegen(job, user),
     budget: (args) => budgetUebertragen(args),
     live: (args) => schalten(args),
+    metaBereit,
     jetzt: () => Date.now(),
   }
+}
+
+/** Lage einer Region samt Meta-Bereitschaft, Grundlage für den Planer. */
+async function lageLaden(sb, regionId, b) {
+  const lage = await b.ladeLage(sb, regionId)
+  return { ...lage, metaBereit: b.metaBereit ? b.metaBereit() : true }
 }
 
 /**
@@ -152,11 +184,11 @@ export async function regionBearbeiten(regionId, b = standardBausteine(), start 
   const zeitUebrig = () => b.jetzt() - start < ZEITBUDGET_MS
 
   for (let runde = 0; runde < 12 && zeitUebrig(); runde++) {
-    const lage = await b.ladeLage(sb, regionId)
+    const lage = await lageLaden(sb, regionId, b)
     const { region } = lage
     const user = { id: region.autopilot_von }
     const plan = planeRegion(lage)
-    if (runde === 0) for (const h of plan.hinweise) await protokoll(sb, regionId, { schritt: 'hinweis', text: h })
+    if (runde === 0) for (const h of plan.hinweise) await hinweisProtokoll(sb, regionId, h)
     if (plan.schritte.length === 0) break
 
     let bilderInRunde = 0
@@ -285,7 +317,12 @@ export async function autopilotLauf({ bausteine = standardBausteine(), heute = n
     for (const r of regionen) {
       if (bausteine.jetzt() - start >= ZEITBUDGET_MS) break
       const schritte = await regionBearbeiten(r.id, bausteine, start)
-      bericht.regionen[r.id] = { ...bericht.regionen[r.id], name: r.name, schritte: schritte.map((s) => s.fehler ? `${s.art}: Fehler` : s.art) }
+      const danach = planeRegion(await lageLaden(sb, r.id, bausteine))
+      bericht.regionen[r.id] = {
+        ...bericht.regionen[r.id], name: r.name,
+        schritte: schritte.map((s) => s.fehler ? `${s.art}: Fehler` : s.art),
+        hinweise: danach.hinweise, offen: danach.schritte.map((s) => s.art),
+      }
     }
   } catch (e) {
     bericht.fehler = e.message

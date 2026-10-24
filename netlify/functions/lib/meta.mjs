@@ -33,7 +33,7 @@ function parameter(cfg, werte) {
 export class MetaFehler extends Error {}
 
 export async function graph(cfg, methode, pfad, werte, { fetchFn = fetch } = {}) {
-  const basis = `https://graph.facebook.com/${cfg.version}/${pfad.replace(/^\//, '')}`
+  const basis = `${process.env.META_GRAPH_URL || 'https://graph.facebook.com'}/${cfg.version}/${pfad.replace(/^\//, '')}`
   const p = parameter(cfg, werte)
   const r =
     methode === 'GET'

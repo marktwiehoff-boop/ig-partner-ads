@@ -5,3 +5,5 @@ dist
 !.env.example
 .netlify
 *.log
+
+tests/e2e/.bin

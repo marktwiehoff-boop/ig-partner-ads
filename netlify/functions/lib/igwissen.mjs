@@ -16,7 +16,7 @@ export async function ladeMarkenwissen({ fetchFn = fetch, jetzt = Date.now() } =
 
   const kopf = { authorization: `Bearer ${token}`, 'x-github-api-version': '2022-11-28', 'user-agent': 'ig-partner-ads' }
   const holen = async (pfad, roh) => {
-    const url = `https://api.github.com/repos/${repo}/contents/${encodeURI(pfad)}?ref=${encodeURIComponent(ref)}`
+    const url = `${process.env.IGWISSEN_API_URL || 'https://api.github.com'}/repos/${repo}/contents/${encodeURI(pfad)}?ref=${encodeURIComponent(ref)}`
     const r = await fetchFn(url, { headers: { ...kopf, accept: roh ? 'application/vnd.github.raw' : 'application/vnd.github+json' } })
     if (!r.ok) throw new Error(`IG-Wissen: ${pfad} nicht lesbar (HTTP ${r.status}).`)
     return roh ? r.text() : r.json()

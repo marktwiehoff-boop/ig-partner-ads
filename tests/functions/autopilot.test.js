@@ -165,6 +165,20 @@ function bausteineFake(sb, extra = {}) {
   return b
 }
 
+describe('planeRegion ohne Meta-Schlüssel', () => {
+  it('bereitet alles bis zur Freigabe vor, legt aber nichts bei Meta an', () => {
+    const creatives = [
+      c({ motiv: 'gruendergeschichte', status: 'freigegeben', medien: bild, markencheck: { pruefung: ok } }),
+      c({ motiv: 'zahlen_sicherheit', markencheck: { pruefung: ok }, medien: bild }),
+    ]
+    const p = planeRegion({ region, kampagne: null, creatives, einst, heute, metaBereit: false })
+    expect(p.schritte.map((s) => s.art)).toEqual(['texte', 'freigeben'])
+    expect(p.hinweise.some((h) => /Meta-Schlüssel fehlen/.test(h))).toBe(true)
+    const mit = planeRegion({ region, kampagne: null, creatives, einst, heute, metaBereit: true })
+    expect(mit.schritte.map((s) => s.art)).toEqual(['texte', 'freigeben', 'meta_anlegen'])
+  })
+})
+
 describe('regionBearbeiten', () => {
   beforeEach(() => {
     zustand.sb = fakeSupabase({ ads_regions: [region], ads_campaigns: [], ads_creatives: [], ads_approvals: [], ads_protokoll: [] })
@@ -207,6 +221,20 @@ describe('regionBearbeiten', () => {
     expect(neu).toBeTruthy()
     expect(b.texte.mock.calls.some((k) => /Zahl erfunden/.test(k[0].eingabe.hinweis))).toBe(true)
     expect(neu.status).toBe('freigegeben')
+  })
+
+  it('ohne Meta-Schlüssel: Texte, Prüfung, Bilder, Freigabe laufen, dann wartet die Region mit einem Hinweis', async () => {
+    const b = bausteineFake(zustand.sb, { metaBereit: () => false })
+    const erledigt = await regionBearbeiten('r1', b)
+    const arten = erledigt.map((s) => s.art)
+    expect(arten).toContain('freigeben')
+    expect(arten).not.toContain('meta_anlegen')
+    expect(arten).not.toContain('live')
+    expect(erledigt.some((s) => s.fehler)).toBe(false)
+    expect(b.metaAnlegen).not.toHaveBeenCalled()
+    expect(zustand.sb.db.ads_creatives.filter((x) => x.status === 'freigegeben')).toHaveLength(4)
+    const hinweise = zustand.sb.db.ads_protokoll.filter((p) => p.details.schritt === 'hinweis' && /Meta-Schlüssel/.test(p.details.text))
+    expect(hinweise).toHaveLength(1)
   })
 
   it('Fehler eines Schritts landet im Protokoll und stoppt die Region für diesen Lauf', async () => {
