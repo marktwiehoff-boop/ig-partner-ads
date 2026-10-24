@@ -6,6 +6,7 @@ import { useAuth } from '../context/Auth.jsx'
 import { Seite, Meldung, Laden, Chip, Dialog, Balken } from '../components/Teile.jsx'
 import { MOTIVE } from '../../shared/motive.js'
 import { tagesbudgetCent } from '../../shared/budget.js'
+import { Fortschritt, AutopilotStatus } from '../components/Partnersuche.jsx'
 
 const ZEITRAEUME = [['monat', 'Dieser Monat'], ['30', '30 Tage'], ['7', '7 Tage']]
 
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [fehler, setFehler] = useState(null)
   const [meldung, setMeldung] = useState(null)
   const [holt, setHolt] = useState(false)
+  const [stosse, setStosse] = useState(false)
   const [schalten, setSchalten] = useState(null)
 
   const laden = useCallback(async () => {
@@ -28,8 +30,8 @@ export default function Dashboard() {
       supabase.from('ads_campaigns').select('*'),
       supabase.rpc('ads_ausgaben_monat', { p_stichtag: monat.bis }),
       supabase.from('ads_einstellungen').select('*').single(),
-      supabase.from('ads_protokoll').select('*').order('created_at', { ascending: false }).limit(5),
-      supabase.from('ads_creatives').select('region_id, status, meta_ad_id'),
+      supabase.from('ads_protokoll').select('*').order('created_at', { ascending: false }).limit(12),
+      supabase.from('ads_creatives').select('id, region_id, motiv, status, meta_ad_id, meta_aktiv, medien, markencheck'),
     ])
     const f = [dash, regionen, kampagnen, ausgaben, einst, protokoll, anzeigen].find((r) => r.error)
     if (f) return setFehler(f.error.message)
@@ -49,6 +51,18 @@ export default function Dashboard() {
     }
     return s
   }, [daten])
+
+  async function autopilotAnstossen() {
+    setStosse(true); setMeldung(null)
+    try {
+      await funktion('autopilot-anstossen')
+      setMeldung({ art: 'ok', text: 'Der Autopilot läuft jetzt im Hintergrund. In ein paar Minuten siehst du hier die Schritte.' })
+    } catch (e) {
+      setMeldung({ art: 'fehler', text: e.message })
+    } finally {
+      setStosse(false)
+    }
+  }
 
   async function zahlenHolen() {
     setHolt(true); setMeldung(null)
@@ -72,7 +86,13 @@ export default function Dashboard() {
     <Seite
       titel="Dashboard"
       unter="Was die Anzeigen kosten und wie gut die Leads sind."
-      aktion={darfBedienen && <button className="knopf-rand" onClick={zahlenHolen} disabled={holt}>{holt ? 'Hole Zahlen …' : 'Zahlen jetzt abholen'}</button>}
+      aktion={darfBedienen && (
+        <div className="flex flex-wrap items-center gap-2">
+          <AutopilotStatus />
+          <button className="knopf-rand" onClick={autopilotAnstossen} disabled={stosse}>{stosse ? 'Gestartet …' : 'Autopilot jetzt laufen lassen'}</button>
+          <button className="knopf-rand" onClick={zahlenHolen} disabled={holt}>{holt ? 'Hole Zahlen …' : 'Zahlen jetzt abholen'}</button>
+        </div>
+      )}
     >
       <div className="mb-4 flex gap-2" role="group" aria-label="Zeitraum">
         {ZEITRAEUME.map(([k, t]) => (
@@ -97,6 +117,7 @@ export default function Dashboard() {
             zeilen={daten.zeilen.filter((z) => z.region_id === r.id)}
             ausgabenMonat={daten.ausgabenMonat[r.id] || 0}
             anzeigenBeiMeta={daten.anzeigen.filter((a) => a.region_id === r.id && a.meta_ad_id && a.status === 'freigegeben').length}
+            creatives={daten.anzeigen.filter((a) => a.region_id === r.id)}
             darfBedienen={darfBedienen}
             onSchalten={(aktion) => setSchalten({ region: r, aktion })}
           />
@@ -110,7 +131,7 @@ export default function Dashboard() {
             {daten.protokoll.map((p) => (
               <li key={p.id}>
                 <span className="text-slate-500">{datumZeit(p.created_at)}</span>{' '}
-                {p.ereignis === 'schutzpause' ? <>Schutzpause: {p.details.grund}</> : <>Kennzahlen abgeholt ({p.details.zeilen} Zeilen)</>}
+                <ProtokollText p={p} regionen={daten.regionen} />
               </li>
             ))}
           </ul>
@@ -120,6 +141,31 @@ export default function Dashboard() {
       <SchaltDialog auftrag={schalten} kampagnen={daten.kampagnen} ausgaben={daten.ausgabenMonat} onFertig={(m) => { setSchalten(null); if (m) { setMeldung(m); laden() } }} />
     </Seite>
   )
+}
+
+const SCHRITT_TEXT = {
+  texte: (d) => `Texte erzeugt für ${(d.motive || []).map((m) => MOTIVE[m]?.titel || m).join(', ')}`,
+  pruefen: (d) => `Prüfung ${MOTIVE[d.motiv]?.titel || ''}: ${d.bestanden ? 'bestanden' : `abgelehnt (${d.befunde})`}`,
+  bilder: (d) => `${d.anzahl} Bilder erzeugt${d.mit_vorlage ? ' mit Vorlage' : ''}`,
+  freigeben: (d) => `Anzeige ${MOTIVE[d.motiv]?.titel || ''} automatisch freigegeben`,
+  meta_anlegen: (d) => `${d.neu} Anzeige(n) pausiert bei Meta angelegt`,
+  budget: (d) => `Tagesbudget an Meta: ${euro((d.tagesbudget_cent || 0) / 100)}`,
+  live: (d) => d.gesperrt ? `Nicht live: ${d.gesperrt.join(', ')}` : `Live geschaltet (${d.anzeigen} Anzeige(n))`,
+  optimierung: (d) => `Motiv ${MOTIVE[d.motiv]?.titel || d.motiv} pausiert: ${d.grund}`,
+  hinweis: (d) => d.text,
+}
+
+function ProtokollText({ p, regionen }) {
+  const region = regionen.find((r) => r.id === p.region_id)?.name
+  const d = p.details || {}
+  if (p.ereignis === 'schutzpause') return <>Schutzpause{region ? ` ${region}` : ''}: {d.grund}</>
+  if (p.ereignis === 'kennzahlen_abgeholt') return <>Kennzahlen abgeholt ({d.zeilen} Zeilen)</>
+  if (p.ereignis === 'lead_meldung_fehler') return <>Lead gespeichert, Meldung an Meta fehlgeschlagen: {d.fehler}</>
+  if (p.ereignis === 'autopilot') {
+    const text = d.fehler ? `${d.schritt}: Fehler, ${d.fehler}` : (SCHRITT_TEXT[d.schritt] || (() => d.schritt))(d)
+    return <><strong>{region}</strong> · Autopilot: {text}</>
+  }
+  return <>{p.ereignis}</>
 }
 
 function Kachel({ titel, wert, unter, hervor }) {
@@ -132,7 +178,7 @@ function Kachel({ titel, wert, unter, hervor }) {
   )
 }
 
-function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta, darfBedienen, onSchalten }) {
+function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta, creatives, darfBedienen, onSchalten }) {
   const status = KAMPAGNEN_STATUS[kampagne?.status || 'entwurf']
   return (
     <section className="karte">
@@ -141,8 +187,13 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
           <h2 className="text-2xl">{region.name}</h2>
           <p className="text-xs text-slate-500">{(region.staedte || []).map((s) => s.name).join(', ')} · {region.umkreis_km} km Umkreis</p>
         </div>
-        <Chip farbe={status.farbe}>{status.text}</Chip>
+        <div className="flex gap-2">
+          {region.autopilot && <Chip farbe="bg-fresh text-forest">Partnersuche läuft</Chip>}
+          <Chip farbe={status.farbe}>{status.text}</Chip>
+        </div>
       </div>
+
+      <Fortschritt region={region} kampagne={kampagne} creatives={creatives} />
 
       <div className="mt-3">
         <div className="mb-1 flex justify-between text-xs">
@@ -182,7 +233,7 @@ function RegionKarte({ region, kampagne, zeilen, ausgabenMonat, anzeigenBeiMeta,
         <p className="mt-1 text-[11px] text-slate-500">Leads aus dem Erfolgscheck, in Klammern die Zählung von Meta.</p>
       </div>
 
-      {darfBedienen && kampagne?.meta_campaign_id && (
+      {darfBedienen && kampagne?.meta_campaign_id && !region.autopilot && (
         <div className="mt-4 flex flex-wrap gap-2">
           {kampagne.status !== 'live' && <button className="knopf-frisch" onClick={() => onSchalten('live')} disabled={!anzeigenBeiMeta}>Live schalten</button>}
           {kampagne.status === 'live' && <button className="knopf-rand" onClick={() => onSchalten('live')}>Neue Anzeigen live schalten</button>}

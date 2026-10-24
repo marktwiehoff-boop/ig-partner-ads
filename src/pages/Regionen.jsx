@@ -5,6 +5,7 @@ import { euro, KAMPAGNEN_STATUS } from '../lib/format.js'
 import { useAuth } from '../context/Auth.jsx'
 import { Seite, Meldung, Laden, Chip, Dialog } from '../components/Teile.jsx'
 import { tagesbudgetCent } from '../../shared/budget.js'
+import { PartnersucheSchalter } from '../components/Partnersuche.jsx'
 
 export default function Regionen() {
   const { istAdmin } = useAuth()
@@ -123,8 +124,10 @@ function RegionFormular({ region, kampagne, bereit = 0, neu, onFertig }) {
       ? await supabase.from('ads_regions').insert({ ...werte, slug: slugAus(f.name) })
       : await supabase.from('ads_regions').update(werte).eq('id', region.id)
     if (error) return setMeldung({ art: 'fehler', text: error.message })
-    setMeldung({ art: 'ok', text: kampagne?.meta_adset_id && Number(werte.monatsbudget_eur) !== Number(region.monatsbudget_eur)
-      ? 'Gespeichert. Übertrage das neue Budget noch an Meta.' : 'Gespeichert.' })
+    const budgetNeu = kampagne?.meta_adset_id && Number(werte.monatsbudget_eur) !== Number(region.monatsbudget_eur)
+    setMeldung({ art: 'ok', text: budgetNeu
+      ? (region.autopilot ? 'Gespeichert. Der Autopilot überträgt das neue Budget beim nächsten Lauf an Meta.' : 'Gespeichert. Übertrage das neue Budget noch an Meta.')
+      : 'Gespeichert.' })
     onFertig()
   }
 
@@ -187,21 +190,27 @@ function RegionFormular({ region, kampagne, bereit = 0, neu, onFertig }) {
       {darfBedienen && (
         <div className="mt-4 flex flex-wrap gap-2">
           <button className="knopf-haupt">Speichern</button>
-          {!neu && (
-            <button type="button" className="knopf-rand" onClick={anlegen} disabled={Boolean(arbeit) || bereit === 0}>
-              {kampagne?.meta_campaign_id ? `${bereit} neue Anzeige(n) zu Meta` : 'Kampagne pausiert bei Meta anlegen'}
-            </button>
-          )}
-          {kampagne?.meta_adset_id && tbNeu !== kampagne.tagesbudget_cent && Number(f.monatsbudget_eur) === Number(region.monatsbudget_eur) && (
-            <button type="button" className="knopf-frisch" onClick={() => setBudgetDialog(true)}>Budget an Meta übertragen</button>
-          )}
         </div>
-      )}
-      {!neu && bereit === 0 && !kampagne?.meta_campaign_id && darfBedienen && (
-        <p className="mt-2 text-xs text-slate-500">Zum Anlegen brauchst du mindestens eine freigegebene Anzeige mit Bild.</p>
       )}
       {arbeit && <div className="mt-3"><Laden text={arbeit} /></div>}
       <div className="mt-3"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
+
+      {!neu && <PartnersucheSchalter region={region} kampagne={kampagne} darf={darfBedienen} onGeaendert={onFertig} />}
+
+      {!neu && (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer text-slate-500">Von Hand steuern (ohne Autopilot)</summary>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className="knopf-rand" onClick={anlegen} disabled={Boolean(arbeit) || bereit === 0}>
+              {kampagne?.meta_campaign_id ? `${bereit} neue Anzeige(n) zu Meta` : 'Kampagne pausiert bei Meta anlegen'}
+            </button>
+            {kampagne?.meta_adset_id && tbNeu !== kampagne.tagesbudget_cent && Number(f.monatsbudget_eur) === Number(region.monatsbudget_eur) && (
+              <button type="button" className="knopf-frisch" onClick={() => setBudgetDialog(true)}>Budget an Meta übertragen</button>
+            )}
+            {bereit === 0 && !kampagne?.meta_campaign_id && <span className="self-center text-xs text-slate-500">Zum Anlegen braucht es eine freigegebene Anzeige mit Bild.</span>}
+          </div>
+        </details>
+      )}
 
       {!neu && (
         <BudgetDialog offen={budgetDialog} region={region} kampagne={kampagne} onFertig={(m) => { setBudgetDialog(false); if (m) { setMeldung(m); onFertig() } }} />

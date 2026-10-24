@@ -2,7 +2,28 @@
 
 Interne App der immergrün Franchise GmbH. Rick (Expansion) erstellt, budgetiert, gibt frei und wertet Meta-Ads zur Franchise-Partnersuche aus. Grundlage ist [`docs/ig-partner-ads-bauplan.md`](docs/ig-partner-ads-bauplan.md) (Phase 1 / MVP).
 
-**Grundsatz:** Mensch entscheidet, KI liefert. Nichts geht live und kein Budget steigt ohne Klick eines Menschen mit Rolle `admin` oder `expansion`.
+**Grundsatz:** Mensch entscheidet, KI liefert. Die menschliche Entscheidung ist **ein** Klick: „Partnersuche starten“ für eine Region mit Monatsbudget und Obergrenze. Alles danach erledigt der Autopilot im Rahmen dieses Budgets. Mehr Budget gibt es nur, wenn ein Mensch das Monatsbudget ändert.
+
+## Autopilot: So läuft die Partnersuche von allein
+
+1. Rick trägt unter **Regionen** Städte, Umkreis und Monatsbudget ein und klickt **Partnersuche starten**. Der Dialog zeigt Budget, Tagesbudget und Obergrenze. Dieser Klick ist die Freigabe und wird protokolliert.
+2. Ab dann läuft alle 15 Minuten der Autopilot (`autopilot-tick` → `autopilot-arbeit-background`) und macht je Region der Reihe nach:
+
+| Schritt | Was passiert | Wer entscheidet |
+|---|---|---|
+| Texte | Claude schreibt für jedes Motiv ohne Anzeige eine Variante, nur mit IG-Wissen | App |
+| Prüfung | Ein zweiter Claude-Durchlauf prüft jede Anzeige gegen das IG-Wissen: Fakten, Markenstimme, keine Versprechen, Zielgruppe, Region, Rechtliches. Fällt sie durch, wird sie abgelehnt und mit Korrekturhinweis neu geschrieben. Nach zwei Ablehnungen wartet das Motiv auf einen Menschen | App |
+| Bilder | Higgsfield erzeugt 1:1, 3:4 und 9:16 mit eurer Bildvorlage | App |
+| Freigabe | Modus „automatisch“: die Datenbank gibt frei, wenn Prüfung bestanden, Markenregeln sauber und Bild da. Modus „manuell“: Rick klickt unter Freigaben | App oder Rick |
+| Meta | Kampagne, Anzeigengruppe mit Umkreis und Anzeigen werden pausiert angelegt | App |
+| Budget | Tagesbudget bei Meta = Monatsbudget / 31, wird bei Änderung angeglichen, nie darüber | App (Wert kommt vom Menschen) |
+| Live | Kampagne geht live, neue Anzeigen werden aktiviert | App (Freigabe = Start der Partnersuche) |
+| Schutz | Nähert sich die Region ihrer Obergrenze, pausiert die App. Im neuen Monat geht es automatisch weiter | App |
+| Lernen | Montags: Motive, die je gutem Lead mehr als doppelt so teuer sind wie das beste Motiv (ab 10 Leads, 14 Tage live), werden pausiert und durch eine neue Variante ersetzt | App |
+
+3. Jeder Schritt steht im Dashboard unter „Was die App zuletzt selbst getan hat“. **Partnersuche stoppen** pausiert die Kampagne sofort.
+
+**Was bleibt beim Menschen:** Region und Budget festlegen, Obergrenzen (nur admin), Partnersuche starten und stoppen, Motive nach zwei Ablehnungen, Budget zwischen Regionen verschieben, Bildvorlagen hochladen.
 
 ## Was Phase 1 kann
 
@@ -14,6 +35,7 @@ Interne App der immergrün Franchise GmbH. Rick (Expansion) erstellt, budgetiert
 | Freigaben | Nur freigegebene Anzeigen mit Bild gehen zu Meta. Jede Entscheidung steht im Protokoll |
 | Meta | Je Region eine Lead-Kampagne mit Umkreis-Targeting, Facebook und Instagram, Platzierung automatisch. **Alles startet pausiert.** Live schalten nur mit Häkchen und Klick |
 | Kennzahlen | Jeden Morgen um 05:15 UTC holt die App die Meta-Zahlen der letzten 3 Tage in `ads_metrics_daily` |
+| Lead-Rückkopplung | Der Erfolgscheck meldet jeden abgeschlossenen Check an `lead-eingang`. Die App ordnet Region, Motiv und Anzeige zu und meldet gute Leads als „QualifiedLead“ über die Conversions API an Meta |
 | Schutz | Tagesbudget = Monatsbudget / 31. Droht ein Tag die Obergrenze zu reißen, pausiert die App die Kampagne (Pausieren senkt Kosten, das darf sie allein) |
 
 ## Rollen
@@ -57,6 +79,7 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 | `META_PAGE_ID` | Facebook-Seiten-ID |
 | `META_INSTAGRAM_USER_ID` | Instagram-Konto-ID |
 | `META_PIXEL_ID` | Pixel-ID der Erfolgscheck-Landingpage |
+| `LEAD_WEBHOOK_SECRET` | Frei gewähltes, langes Geheimnis. Dasselbe trägt der Erfolgscheck (oder n8n) beim Melden von Leads ein |
 
 4. Danach **Deploys**, dann **Trigger deploy**, dann **Deploy site**. Erst mit dem neuen Build wirken die Variablen.
 
@@ -87,12 +110,36 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 4. Im Meta-Werbeanzeigenmanager prüfen: Kampagne, Anzeigengruppe und Anzeige sind **pausiert**, Umkreis und Tagesbudget (16,12 €) stimmen.
 5. Erst dann im **Dashboard** „Live schalten“.
 
+### 7. Lead-Eingang an den Erfolgscheck anschließen
+
+Nach jedem abgeschlossenen Erfolgscheck schickt die Landingpage (oder ein n8n-Workflow) einen Aufruf:
+
+```
+POST https://ig-partner-ads-immergruen.netlify.app/.netlify/functions/lead-eingang
+Header: x-lead-secret: <LEAD_WEBHOOK_SECRET>
+Body (JSON):
+{
+  "externe_id": "erfolgscheck-12345",
+  "email": "max@beispiel.de",
+  "score": 82,
+  "utm_campaign": "berlin",
+  "utm_content": "gruendergeschichte",
+  "utm_term": "<Anzeigen-ID aus dem Link>",
+  "fbp": "<Cookie _fbp>", "fbc": "<Cookie _fbc>",
+  "event_time": "2026-10-20T10:12:00Z",
+  "client_ip": "…", "user_agent": "…",
+  "event_source_url": "https://erfolgscheck.…"
+}
+```
+
+Die Landingpage muss die UTM-Parameter aus dem Anzeigen-Link bis zum Abschluss mitführen. Leads mit Score ab der Schwelle (Standard 70, einstellbar unter Regionen) gehen als „QualifiedLead“ an Meta. Zum Testen `META_TEST_EVENT_CODE` aus dem Events Manager setzen.
+
 ## Entwickeln
 
 ```
 npm install
 npm run dev        # http://localhost:5650 (braucht .env nach .env.example)
-npm test           # 66 Tests: Markenregeln, Budget, Meta, Claude, Higgsfield, Rechte
+npm test           # 101 Tests: Markenregeln, Budget, Meta, Claude, Higgsfield, Rechte
 npm run test:db    # Migrationen und Datenbankregeln auf lokalem Postgres 16
 npm run build
 ```
@@ -103,13 +150,15 @@ npm run build
 |---|---|
 | `supabase/migrations/` | Tabellen `ads_*`, Rechte (RLS), Budget-Grenzen, Freigabe-Funktion, Protokoll |
 | `shared/` | Regeln, die Browser und Server teilen: Markenregeln, Budget, Meta-Anfragen, UTM-Links |
-| `netlify/functions/` | `texte-erzeugen-background`, `medien-erzeugen-background`, `kampagne-anlegen-background`, `kampagne-schalten`, `budget-uebertragen`, `kennzahlen-taeglich` (geplant), `kennzahlen-abholen`, `ort-suchen` |
+| `netlify/functions/` | `autopilot-tick` (alle 15 Min) → `autopilot-arbeit-background`, `autopilot-anstossen`, `lead-eingang`, `texte-erzeugen-background`, `medien-erzeugen-background`, `kampagne-anlegen-background`, `kampagne-schalten`, `budget-uebertragen`, `kennzahlen-taeglich` (täglich), `kennzahlen-abholen`, `ort-suchen` |
+| `netlify/functions/lib/autopilot.mjs` | Planer (reine Funktion, getestet) und Ausführung der Schritte, Lauf-Sperre, Wochen-Lernen |
+| `netlify/functions/lib/pruefer.mjs` | Qualitätsprüfung jeder Anzeige gegen das IG-Wissen vor der automatischen Freigabe |
 | `src/pages/` | Dashboard, Regionen, Content-Studio, Freigaben, Nutzer, Login |
 | `tests/` | Vitest (`unit`, `functions`) und Datenbank-Tests (`db`) |
 
 ## Offen für später
 
-- Phase 2: Erfolgscheck schreibt Leads mit UTM in `ads_leads`, „QualifiedLead“ über die Conversions API. Die Anzeigen-Links tragen dafür schon `utm_campaign`, `utm_content` und `utm_term` (Anzeigen-ID).
-- Phase 3: Wöchentliche Budget-Empfehlung mit Freigabe, Wochenbericht.
+- Phase 2 ist angeschlossen (`lead-eingang`). Offen: Der Erfolgscheck muss den Aufruf senden, und die Meta-Anzeigengruppe kann später auf das Ereignis „QualifiedLead“ statt „Lead“ optimieren (Custom Conversion im Events Manager anlegen, dann `promoted_object` umstellen).
+- Phase 3 teilweise: Schwache Motive werden wöchentlich automatisch pausiert. Offen: Budget zwischen Regionen verschieben (Vorschlag mit Freigabe), Wochenbericht per E-Mail.
 - Phase 4: CRM-Status (Termine) zurückspielen.
 - Higgsfield-Modelle sind über `HF_BILD_MODELL` und `HF_VIDEO_MODELL` einstellbar, falls Higgsfield die Namen ändert.

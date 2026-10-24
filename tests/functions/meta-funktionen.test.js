@@ -11,6 +11,8 @@ const { schalten } = await import('../../netlify/functions/kampagne-schalten.mjs
 const { budgetUebertragen } = await import('../../netlify/functions/budget-uebertragen.mjs')
 const { kampagneAnlegen } = await import('../../netlify/functions/kampagne-anlegen-background.mjs')
 const { kennzahlenAbholen } = await import('../../netlify/functions/lib/kennzahlen.mjs')
+const { leadVerarbeiten } = await import('../../netlify/functions/lead-eingang.mjs')
+const { stufeAus, ereignis, hash } = await import('../../netlify/functions/lib/conversions.mjs')
 
 const RICK = { id: 'rick' }
 const region = {
@@ -194,5 +196,56 @@ describe('Kennzahlen', () => {
     const setzeStatus = vi.fn()
     await kennzahlenAbholen({ deps: { cfg, graphAlle: async () => [], setzeStatus, ausgabenMonat: async () => ({ jeRegion: { r1: 100 }, gesamt: 100 }) } })
     expect(setzeStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe('Lead-Eingang und Conversions API', () => {
+  it('Stufen aus dem Score', () => {
+    expect(stufeAus(85)).toBe('hoch')
+    expect(stufeAus(70, 70)).toBe('hoch')
+    expect(stufeAus(55)).toBe('mittel')
+    expect(stufeAus(10)).toBe('niedrig')
+    expect(stufeAus(null)).toBeNull()
+  })
+
+  it('Ereignis hat gehashte E-Mail und UTM-Kontext', () => {
+    const e = ereignis({ externe_id: 'L1', email: ' Max@Beispiel.de ', score: 90, stufe: 'hoch', fbp: 'fb.1', event_time: '2026-10-20T10:00:00Z' }, { regionSlug: 'berlin', motiv: 'lifestyle', quelleUrl: 'https://e.test' })
+    expect(e.event_name).toBe('QualifiedLead')
+    expect(e.user_data.em).toEqual([hash('max@beispiel.de')])
+    expect(e.user_data.fbp).toBe('fb.1')
+    expect(e.custom_data).toEqual({ score: 90, stufe: 'hoch', region: 'berlin', motiv: 'lifestyle' })
+    expect(e.event_time).toBe(Math.floor(Date.parse('2026-10-20T10:00:00Z') / 1000))
+  })
+
+  it('guter Lead wird gespeichert, zugeordnet und an Meta gemeldet', async () => {
+    zustand.sb = fakeSupabase({
+      ads_einstellungen: [{ id: true, gute_lead_schwelle: 70, landingpage_url: 'https://e.test' }],
+      ads_regions: [{ id: 'r1', slug: 'berlin' }],
+      ads_creatives: [{ id: '11111111-1111-1111-1111-111111111111', motiv: 'lifestyle', region_id: 'r1' }],
+      ads_leads: [], ads_protokoll: [],
+    })
+    const senden = vi.fn(async () => ({ events_received: 1 }))
+    const r = await leadVerarbeiten({ externe_id: 'L1', email: 'a@b.de', score: 80, utm_campaign: 'berlin', utm_content: 'lifestyle', utm_term: '11111111-1111-1111-1111-111111111111' }, { cfg, senden })
+    expect(r).toMatchObject({ region: 'berlin', motiv: 'lifestyle', stufe: 'hoch', meta_gemeldet: true })
+    expect(zustand.sb.db.ads_leads[0]).toMatchObject({ region_id: 'r1', creative_id: '11111111-1111-1111-1111-111111111111', score: 80, stufe: 'hoch' })
+    expect(zustand.sb.db.ads_leads[0].meta_gemeldet_am).toBeTruthy()
+    expect(senden.mock.calls[0][2]).toMatchObject({ regionSlug: 'berlin', motiv: 'lifestyle' })
+  })
+
+  it('schwacher Lead wird gespeichert, aber nicht gemeldet; Meta-Fehler verliert keinen Lead', async () => {
+    zustand.sb = fakeSupabase({ ads_einstellungen: [{ id: true, gute_lead_schwelle: 70 }], ads_regions: [], ads_creatives: [], ads_leads: [], ads_protokoll: [] })
+    const senden = vi.fn(async () => { throw new Error('Meta down') })
+    const r1 = await leadVerarbeiten({ score: 30, utm_campaign: 'nirgends' }, { cfg, senden })
+    expect(r1).toMatchObject({ stufe: 'niedrig', meta_gemeldet: false, region: null })
+    expect(senden).not.toHaveBeenCalled()
+    const r2 = await leadVerarbeiten({ externe_id: 'L2', score: 95 }, { cfg, senden })
+    expect(r2.meta_gemeldet).toBe(false)
+    expect(zustand.sb.db.ads_leads).toHaveLength(2)
+    expect(zustand.sb.db.ads_protokoll[0].ereignis).toBe('lead_meldung_fehler')
+  })
+
+  it('ungültiger Score wird abgelehnt', async () => {
+    zustand.sb = fakeSupabase({ ads_einstellungen: [{ id: true, gute_lead_schwelle: 70 }] })
+    await expect(leadVerarbeiten({ score: 140 }, { cfg })).rejects.toThrow(/zwischen 0 und 100/)
   })
 })
