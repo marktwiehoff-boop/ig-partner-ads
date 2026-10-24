@@ -1,0 +1,32 @@
+@font-face { font-family: "Gloock"; src: url("./assets/fonts/Gloock-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Work Sans"; src: url("./assets/fonts/WorkSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Work Sans"; src: url("./assets/fonts/WorkSans-Bold.ttf") format("truetype"); font-weight: 600 700; font-display: swap; }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-ig-50 text-slate-800 font-sans antialiased; }
+  h1, h2, h3 { @apply font-display text-ig-900; }
+  :focus-visible { @apply outline-none ring-2 ring-fresh ring-offset-2 ring-offset-ig-50; }
+}
+
+@layer components {
+  /* Karten: weiß, Haarlinie, fast ohne Schatten (IG-Store-Designsystem) */
+  .karte { @apply bg-white rounded-2xl border border-ig-hairline shadow-[0_1px_3px_rgba(0,0,0,.04)] p-4; }
+  .knopf { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold min-h-[44px] select-none transition duration-200 active:scale-[.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100; }
+  .knopf-haupt { @apply knopf bg-forest text-white hover:bg-dunkel; }
+  .knopf-frisch { @apply knopf bg-fresh text-forest hover:brightness-95; }
+  .knopf-rand { @apply knopf border border-ig-hairline bg-white text-ig-800 hover:bg-ig-100; }
+  .knopf-warn { @apply knopf bg-igred text-white hover:brightness-95; }
+  .feld { @apply w-full rounded-xl border border-ig-hairline bg-white px-3 py-2.5 text-base text-slate-800 placeholder:text-slate-400 outline-none focus:border-ig-600 focus:ring-2 focus:ring-ig-300; }
+  .label { @apply block text-sm font-bold mb-1 text-ig-900; }
+  .etikett { @apply text-[11px] font-bold uppercase tracking-[1px] text-ig-700; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
