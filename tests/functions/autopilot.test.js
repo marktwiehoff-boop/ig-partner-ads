@@ -11,6 +11,7 @@ const { planeRegion, regionBearbeiten, autopilotLauf, wocheOptimieren, abgelehnt
 const { schwacheMotive, wochenbeginn } = await import('../../netlify/functions/lib/optimierung.mjs')
 const { pruefeAnzeige, befundeText } = await import('../../netlify/functions/lib/pruefer.mjs')
 const { internesGeheimnis, internGeprueft } = await import('../../netlify/functions/lib/intern.mjs')
+const { bereitschaftErmitteln } = await import('../../netlify/functions/bereitschaft.mjs')
 
 const RICK = '00000000-0000-0000-0000-00000000000e'
 const region = {
@@ -342,5 +343,44 @@ describe('Internes Geheimnis', () => {
     expect(internGeprueft(new Request('https://x', { headers: { 'x-intern': g } }))).toBe(true)
     expect(internGeprueft(new Request('https://x', { headers: { 'x-intern': 'falsch' } }))).toBe(false)
     expect(internGeprueft(new Request('https://x'))).toBe(false)
+  })
+})
+
+describe('Bereitschaft', () => {
+  const env = { IGWISSEN_TOKEN: 't', ANTHROPIC_API_KEY: 'a', HF_CREDENTIALS: 'k:s', META_ACCESS_TOKEN: 'm', META_AD_ACCOUNT_ID: '1', META_PAGE_ID: 'p', META_PIXEL_ID: 'x', LEAD_WEBHOOK_SECRET: 'g' }
+  const jetzt = new Date('2026-10-24T10:00:00Z').getTime()
+
+  it('alles grün, wenn Datenbank, Schlüssel und Zeitplan da sind', async () => {
+    zustand.sb = fakeSupabase({ ads_regions: [region], ads_autopilot_lauf: [{ id: true, letzter_lauf: '2026-10-24T09:55:00Z', laeuft_seit: null }] })
+    const b = await bereitschaftErmitteln({ env, jetzt })
+    expect(b.bereit).toBe(true)
+    expect(b.punkte.every((p) => p.ok)).toBe(true)
+    expect(b.punkte.find((p) => p.schluessel === 'regionen').text).toContain('Berlin')
+    expect(JSON.stringify(b)).not.toContain('k:s')
+  })
+
+  it('nennt fehlende Meta-Schlüssel und den nächsten Handgriff, ohne Werte zu zeigen', async () => {
+    zustand.sb = fakeSupabase({ ads_regions: [{ ...region, autopilot: false }], ads_autopilot_lauf: [{ id: true, letzter_lauf: '2026-10-24T09:00:00Z' }] })
+    const b = await bereitschaftErmitteln({ env: { ...env, META_PAGE_ID: '', LEAD_WEBHOOK_SECRET: '' }, jetzt })
+    expect(b.bereit).toBe(false)
+    const meta = b.punkte.find((p) => p.schluessel === 'meta')
+    expect(meta.ok).toBe(false)
+    expect(meta.text).toBe('Meta-Schlüssel fehlen: META_PAGE_ID')
+    expect(meta.hilfe).toMatch(/README/)
+    expect(b.punkte.find((p) => p.schluessel === 'zeitplan').ok).toBe(false)
+    expect(b.punkte.find((p) => p.schluessel === 'regionen').hilfe).toMatch(/Partnersuche starten/)
+    expect(b.punkte.find((p) => p.schluessel === 'lead').ok).toBe(false)
+  })
+
+  it('fehlende Tabelle heißt: Nachtrag 0007 fehlt', async () => {
+    zustand.sb = fakeSupabase({ ads_regions: [] })
+    const from = zustand.sb.from
+    zustand.sb.from = (t) => t !== 'ads_autopilot_lauf' ? from(t)
+      : { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'relation "ads_autopilot_lauf" does not exist' } }) }) }) }
+    const b = await bereitschaftErmitteln({ env, jetzt })
+    const db = b.punkte.find((p) => p.schluessel === 'datenbank')
+    expect(db.ok).toBe(false)
+    expect(db.hilfe).toMatch(/SUPABASE_DB_URL|0007/)
+    expect(b.bereit).toBe(false)
   })
 })

@@ -7,6 +7,7 @@ import { Seite, Meldung, Laden, Chip, Dialog, Balken } from '../components/Teile
 import { MOTIVE } from '../../shared/motive.js'
 import { tagesbudgetCent } from '../../shared/budget.js'
 import { Fortschritt, AutopilotStatus } from '../components/Partnersuche.jsx'
+import { Bereitschaft } from '../components/Bereitschaft.jsx'
 
 const ZEITRAEUME = [['monat', 'Dieser Monat'], ['30', '30 Tage'], ['7', '7 Tage']]
 
@@ -99,6 +100,7 @@ export default function Dashboard() {
           <button key={k} onClick={() => setArt(k)} aria-pressed={art === k} className={`rounded-full px-4 py-2 text-sm font-semibold ${art === k ? 'bg-forest text-white' : 'bg-white text-forest border border-ig-hairline'}`}>{t}</button>
         ))}
       </div>
+      <Bereitschaft />
       <div className="mb-4"><Meldung art={meldung?.art}>{meldung?.text}</Meldung></div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">

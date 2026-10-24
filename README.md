@@ -115,6 +115,8 @@ Du brauchst kein Terminal. Alles läuft über Weboberflächen. **Schlüssel nie 
 4. Im Meta-Werbeanzeigenmanager prüfen: Kampagne, Anzeigengruppe und Anzeige sind **pausiert**, Umkreis und Tagesbudget (16,12 €) stimmen.
 5. Erst dann im **Dashboard** „Live schalten“.
 
+Oben im **Dashboard** steht die **Bereitschaft**: Datenbank-Stand, Zeitplan, IG-Wissen, Claude, Higgsfield, Meta, Lead-Eingang und laufende Regionen, jeweils mit dem nächsten Handgriff, falls etwas fehlt. Erst wenn dort alles grün ist, läuft die Partnersuche ohne weiteres Zutun.
+
 ### 7. Lead-Eingang an den Erfolgscheck anschließen
 
 Nach jedem abgeschlossenen Erfolgscheck schickt die Landingpage (oder ein n8n-Workflow) einen Aufruf:
